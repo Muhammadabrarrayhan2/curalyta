@@ -41,13 +41,36 @@ describe('appDataStore', () => {
       specialty: 'Penyakit Dalam',
       date: '2026-04-26',
       time: '14:30',
-      mode: 'onsite',
+      mode: 'offline',
       chief: 'Kontrol tekanan darah',
     })
 
-    const confirmed = updateBookingStatus(created, created.bookings[0].id, 'confirmed')
+    const createdBooking = selectPatientBookings(created, 'pt-001').find(
+      (booking) =>
+        booking.doctorId === 'dr-001' &&
+        booking.date === '2026-04-26' &&
+        booking.time === '14:30' &&
+        booking.chief === 'Kontrol tekanan darah'
+    )
 
-    expect(selectPatientBookings(confirmed, 'pt-001')[0].status).toBe('confirmed')
-    expect(selectDoctorIncomingBookings(confirmed, 'dr-001')[0].status).toBe('confirmed')
+    const confirmed = updateBookingStatus(created, createdBooking.id, 'confirmed')
+
+    const confirmedPatientBooking = selectPatientBookings(confirmed, 'pt-001').find(
+      (booking) =>
+        booking.doctorId === 'dr-001' &&
+        booking.date === '2026-04-26' &&
+        booking.time === '14:30' &&
+        booking.chief === 'Kontrol tekanan darah'
+    )
+    const confirmedDoctorBooking = selectDoctorIncomingBookings(confirmed, 'dr-001').find(
+      (booking) =>
+        booking.patientId === 'pt-001' &&
+        booking.date === '2026-04-26' &&
+        booking.time === '14:30' &&
+        booking.chief === 'Kontrol tekanan darah'
+    )
+
+    expect(confirmedPatientBooking.status).toBe('confirmed')
+    expect(confirmedDoctorBooking.status).toBe('confirmed')
   })
 })
