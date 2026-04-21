@@ -4,5 +4,6 @@ dist-ssr
 .DS_Store
 .env
 .env.local
+coverage
 *.log
 .npm-cache
