@@ -25,10 +25,24 @@ describe('appDataStore', () => {
 
     const patientBookings = selectPatientBookings(next, 'pt-001')
     const doctorBookings = selectDoctorIncomingBookings(next, 'dr-003')
+    const createdPatientBooking = patientBookings.find(
+      (booking) =>
+        booking.doctorId === 'dr-003' &&
+        booking.date === '2026-04-25' &&
+        booking.time === '09:00' &&
+        booking.chief === 'Kontrol demam anak'
+    )
+    const createdDoctorBooking = doctorBookings.find(
+      (booking) =>
+        booking.patientId === 'pt-001' &&
+        booking.date === '2026-04-25' &&
+        booking.time === '09:00' &&
+        booking.chief === 'Kontrol demam anak'
+    )
 
-    expect(patientBookings[0].doctorId).toBe('dr-003')
-    expect(doctorBookings[0].patientId).toBe('pt-001')
-    expect(doctorBookings[0].status).toBe('pending')
+    expect(createdPatientBooking.doctorId).toBe('dr-003')
+    expect(createdDoctorBooking.patientId).toBe('pt-001')
+    expect(createdDoctorBooking.status).toBe('pending')
   })
 
   it('updates one canonical booking record when the doctor confirms it', () => {
