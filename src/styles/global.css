@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    background: #F5F1E8;
+    color: #0F1B1A;
+    font-family: 'Geist', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Subtle ambient paper texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.55;
+    z-index: 0;
+    background-image:
+      radial-gradient(circle at 18% 28%, rgba(217, 201, 163, 0.08) 0%, transparent 55%),
+      radial-gradient(circle at 82% 72%, rgba(19, 96, 88, 0.04) 0%, transparent 55%);
+  }
+
+  ::selection {
+    background: #0A3A36;
+    color: #F5F1E8;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #D9D2BF;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9DB19A;
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  .font-serif-display {
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+
+  .card-base {
+    @apply bg-ivory-paper border border-line-soft rounded-[14px] shadow-soft;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-900 text-ivory text-sm font-medium transition-colors hover:bg-teal-700;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-line text-ink text-sm font-medium transition-colors hover:bg-ivory-deep;
+  }
+
+  .btn-coral {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-coral text-white text-sm font-medium transition-colors hover:opacity-90;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium font-mono tracking-wide;
+  }
+
+  .eyebrow {
+    @apply text-[11px] uppercase tracking-[0.15em] text-teal-700 font-mono;
+  }
+
+  .dashed-divider {
+    border-top: 1px dashed #D9D2BF;
+  }
+}
+
+/* Animation entrance for staggered reveals */
+.stagger-item {
+  opacity: 0;
+  animation: slideUp 0.5s ease-out forwards;
+}
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.10s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+.stagger-item:nth-child(4) { animation-delay: 0.20s; }
+.stagger-item:nth-child(5) { animation-delay: 0.25s; }
+.stagger-item:nth-child(6) { animation-delay: 0.30s; }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Custom focus ring */
+input:focus, textarea:focus, select:focus, button:focus-visible {
+  outline: none;
+}
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  box-shadow: 0 0 0 3px rgba(43, 134, 128, 0.2);
+  border-color: #2B8680 !important;
+}
