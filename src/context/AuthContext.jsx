@@ -67,8 +67,8 @@ const MOCK_PROFILES = {
 
 const STORAGE_KEY = 'curalyta.session.v1'
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+export function AuthProvider({ children, initialUser = null }) {
+  const [user, setUser] = useState(initialUser)
   const [loginOpen, setLoginOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -76,12 +76,17 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) setUser(JSON.parse(saved))
+      if (saved) {
+        setUser(JSON.parse(saved))
+      } else if (initialUser) {
+        setUser(initialUser)
+        persist(initialUser)
+      }
     } catch (e) {
       console.warn('Auth restore failed', e)
     }
     setLoading(false)
-  }, [])
+  }, [initialUser])
 
   const persist = (next) => {
     if (next) {
