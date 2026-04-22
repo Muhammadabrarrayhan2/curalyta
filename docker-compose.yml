@@ -1,0 +1,83 @@
+# ============================================================
+# Curalyta — Full-stack docker-compose
+#
+# Usage:
+#   1. Copy .env.docker.example to .env and adjust values
+#   2. docker-compose up --build
+#
+# Services:
+#   - postgres  : PostgreSQL 16 database
+#   - backend   : Express + Prisma API (runs migrations on startup)
+#   - frontend  : React + Vite app served via nginx (with API proxy)
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: curalyta-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-curalyta}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-curalyta_dev_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-curalyta}
+    volumes:
+      - curalyta_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-curalyta} -d ${POSTGRES_DB:-curalyta}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: curalyta-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-curalyta}:${POSTGRES_PASSWORD:-curalyta_dev_pw}@postgres:5432/${POSTGRES_DB:-curalyta}?schema=public
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi di .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@curalyta.app}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Curalyta#2025}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemma-3-27b-it}
+      UPLOAD_DIR: /app/backend/uploads
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-10}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-200}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
+    volumes:
+      - curalyta_uploads:/app/backend/uploads
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    # Backend entrypoint auto-applies migrations + auto-seeds default admin on every boot.
+    # No manual setup needed. Default admin: admin@curalyta.app / Curalyta#2025
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: curalyta-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+
+volumes:
+  curalyta_postgres_data:
+    name: curalyta_postgres_data
+  curalyta_uploads:
+    name: curalyta_uploads

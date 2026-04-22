@@ -1,0 +1,391 @@
+// Curalyta database schema
+// PostgreSQL with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// USER & AUTH
+// ============================================================
+
+enum UserRole {
+  DOCTOR
+  PATIENT
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  role          UserRole
+  name          String
+  phone         String?
+  active        Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  doctor          Doctor?
+  patient         Patient?
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+  sessions        Session[]
+  aiConversations AiConversation[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================================
+// DOCTOR
+// ============================================================
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Doctor {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  specialization     String
+  licenseNumber      String             @unique // STR
+  sipNumber          String? // SIP
+  experience         Int                @default(0) // years
+  institution        String
+  bio                String?
+  schedule           String?
+  photoUrl           String?
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedById       String?
+  rejectionReason    String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patients      Patient[]      @relation("DoctorPatients")
+  observations  Observation[]
+  tasks         Task[]
+  appointments  Appointment[]
+  consultations Consultation[]
+  documents     Document[]
+
+  @@index([verificationStatus])
+  @@index([specialization])
+}
+
+// ============================================================
+// PATIENT
+// ============================================================
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model Patient {
+  id                 String    @id @default(cuid())
+  userId             String?   @unique // nullable for offline patients added by doctor
+  name               String
+  dateOfBirth        DateTime
+  gender             Gender
+  address            String?
+  bloodType          String?
+  allergies          String?
+  chronicConditions  String?
+  emergencyContact   String?
+  emergencyContactName String?
+  doctorId           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor        Doctor?        @relation("DoctorPatients", fields: [doctorId], references: [id], onDelete: SetNull)
+  observations  Observation[]
+  vitals        VitalSign[]
+  appointments  Appointment[]
+  consultations Consultation[]
+  documents     Document[]
+
+  @@index([doctorId])
+  @@index([name])
+}
+
+// ============================================================
+// CLINICAL RECORDS
+// ============================================================
+
+model Observation {
+  id         String   @id @default(cuid())
+  patientId  String
+  doctorId   String
+  date       DateTime @default(now())
+  subjective String?  @db.Text
+  objective  String?  @db.Text
+  assessment String?  @db.Text
+  plan       String?  @db.Text
+  notes      String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([date])
+}
+
+enum Consciousness {
+  ALERT
+  CONFUSION
+  VOICE
+  PAIN
+  UNRESPONSIVE
+}
+
+model VitalSign {
+  id                String         @id @default(cuid())
+  patientId         String
+  date              DateTime       @default(now())
+  heartRate         Int?
+  systolicBP        Int?
+  diastolicBP       Int?
+  temperature       Float?
+  oxygenSaturation  Int?
+  respirationRate   Int?
+  bloodGlucose      Float?
+  weight            Float?
+  height            Float?
+  consciousness     Consciousness? @default(ALERT)
+  news2Score        Int?
+  notes             String?
+  createdAt         DateTime       @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([date])
+}
+
+// ============================================================
+// TASKS (Daily to-do for doctors)
+// ============================================================
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  doctorId    String
+  patientId   String?
+  title       String
+  description String?      @db.Text
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(PENDING)
+  dueAt       DateTime?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([status])
+  @@index([dueAt])
+}
+
+// ============================================================
+// APPOINTMENTS
+// ============================================================
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  doctorId  String
+  patientId String
+  date      DateTime
+  duration  Int               @default(30) // minutes
+  reason    String?
+  status    AppointmentStatus @default(SCHEDULED)
+  notes     String?           @db.Text
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([date])
+}
+
+// ============================================================
+// CONSULTATIONS (history of doctor-patient interactions)
+// ============================================================
+
+model Consultation {
+  id          String   @id @default(cuid())
+  doctorId    String
+  patientId   String
+  date        DateTime @default(now())
+  summary     String?  @db.Text
+  diagnosis   String?  @db.Text
+  prescription String? @db.Text
+  aiSummary   String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+  @@index([patientId])
+}
+
+// ============================================================
+// DOCUMENTS (file uploads — medical records, lab results, etc)
+// ============================================================
+
+model Document {
+  id         String   @id @default(cuid())
+  patientId  String?
+  doctorId   String?
+  name       String
+  type       String // MIME type
+  size       Int
+  path       String // server-stored path
+  category   String? // e.g. "lab_result", "xray", "prescription"
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  patient Patient? @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor?  @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+
+  @@index([patientId])
+  @@index([doctorId])
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+enum NotificationType {
+  TASK
+  APPOINTMENT
+  VERIFICATION
+  SYSTEM
+  MESSAGE
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(SYSTEM)
+  title     String
+  message   String?          @db.Text
+  link      String?
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+}
+
+// ============================================================
+// AI CONVERSATIONS (chat history with AI assistant)
+// ============================================================
+
+model AiConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  patientId String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([userId])
+  @@index([patientId])
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  role           String // "user" | "assistant" | "system"
+  content        String         @db.Text
+  createdAt      DateTime       @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String? // e.g. "patient", "observation"
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
