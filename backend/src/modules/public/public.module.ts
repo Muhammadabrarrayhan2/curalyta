@@ -2,15 +2,32 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
 import { asyncHandler } from '../../lib/asyncHandler';
-import { NotFoundError, ServiceUnavailableError } from '../../lib/errors';
+import {
+  NotFoundError,
+  ServiceUnavailableError,
+  ValidationError,
+} from '../../lib/errors';
 import { validate } from '../../middleware/validate';
 import { config } from '../../config';
 import { logger } from '../../lib/logger';
 import {
-  buildPublicAiPrompt,
+  PUBLIC_AI_SYSTEM_INSTRUCTION,
+  buildPublicAiPromptWithOptions,
   clampHistoryContent,
   finalizePublicAiReply,
+  modelSupportsPublicAiSystemInstruction,
 } from './public-ai';
+import {
+  buildPublicAiPayload,
+  type PublicAiPayload,
+} from './public-ai-upload';
+import { createPublicAiImageUploadMiddleware } from './public-ai-upload-middleware';
+import {
+  buildPublicAiRequestBody,
+  fetchPublicAiResponse,
+  resolvePublicAiModel,
+  resolvePublicAiProviderError,
+} from './public-ai-provider';
 
 /**
  * Public endpoints for patient discovery.
@@ -24,19 +41,6 @@ const listSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(12),
 });
 
-const publicChatSchema = z.object({
-  message: z.string().trim().min(1).max(1500),
-  history: z
-    .array(
-      z.object({
-        role: z.enum(['user', 'assistant']),
-        content: z.string().trim().min(1).max(4000),
-      })
-    )
-    .max(8)
-    .default([]),
-});
-
 interface GeminiResponse {
   candidates?: Array<{
     content?: {
@@ -47,72 +51,74 @@ interface GeminiResponse {
   }>;
 }
 
-async function sendPublicChatToGemini(
-  payload: z.infer<typeof publicChatSchema>
-): Promise<string> {
+const publicAiImageUpload = createPublicAiImageUploadMiddleware(
+  config.publicAi.imageMaxMB
+);
+
+async function sendPublicChatToGemini(payload: PublicAiPayload): Promise<string> {
   if (!config.publicAi.enabled) {
     throw new ServiceUnavailableError(
       'Fitur Tanya AI belum dikonfigurasi. Tambahkan GEMINI_API_KEY agar bisa dipakai publik.'
     );
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
-
   try {
     const sanitizedHistory = payload.history.map((item) => ({
       role: item.role,
       content: clampHistoryContent(item.content),
     }));
+    const hasImage = Boolean(payload.image);
+    const model = resolvePublicAiModel({
+      textModel: config.publicAi.model,
+      visionModel: config.publicAi.visionModel,
+      hasImage,
+    });
+    const supportsSystemInstruction = modelSupportsPublicAiSystemInstruction(model);
+    const prompt = buildPublicAiPromptWithOptions(payload.message, {
+      inlineSystemInstruction: !supportsSystemInstruction,
+      hasImage,
+    });
+    const requestBody = buildPublicAiRequestBody({
+      prompt,
+      history: sanitizedHistory,
+      image: payload.image
+        ? {
+            mimeType: payload.image.mimeType,
+            buffer: payload.image.buffer,
+          }
+        : undefined,
+      supportsSystemInstruction,
+      systemInstruction: PUBLIC_AI_SYSTEM_INSTRUCTION,
+    });
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${config.publicAi.model}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': config.publicAi.apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            ...sanitizedHistory.map((item) => ({
-              role: item.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: item.content }],
-            })),
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: buildPublicAiPrompt(payload.message),
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.25,
-            maxOutputTokens: 320,
-          },
-        }),
-        signal: controller.signal,
-      }
-    );
+    const response = await fetchPublicAiResponse({
+      url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      apiKey: config.publicAi.apiKey,
+      requestBody,
+    });
 
     if (!response.ok) {
       const details = await response.text();
       logger.error('Public AI provider error', {
         status: response.status,
         details,
+        hasImage,
+        model,
       });
 
-      if (response.status === 400 || response.status === 401 || response.status === 403) {
+      if (response.status === 401 || response.status === 403) {
         throw new ServiceUnavailableError(
           'Konfigurasi Gemini bermasalah. Periksa GEMINI_API_KEY atau model yang dipakai.'
         );
       }
 
-      if (response.status === 429) {
+      if (response.status === 400 || response.status === 429) {
         throw new ServiceUnavailableError(
-          'Tanya AI sedang ramai dipakai. Coba lagi beberapa saat.'
+          resolvePublicAiProviderError({
+            status: response.status,
+            details,
+            hasImage,
+          })
         );
       }
 
@@ -133,7 +139,9 @@ async function sendPublicChatToGemini(
       );
     }
 
-    return finalizePublicAiReply(text);
+    return finalizePublicAiReply(text, {
+      hasHistory: sanitizedHistory.length > 0,
+    });
   } catch (err) {
     if (err instanceof ServiceUnavailableError) throw err;
 
@@ -142,8 +150,6 @@ async function sendPublicChatToGemini(
     throw new ServiceUnavailableError(
       'Tanya AI sedang tidak tersedia. Silakan coba lagi sebentar lagi.'
     );
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -263,9 +269,28 @@ publicRouter.get(
 
 publicRouter.post(
   '/ai-chat',
-  validate(publicChatSchema),
+  publicAiImageUpload,
   asyncHandler(async (req: Request, res: Response) => {
-    const payload = req.body as z.infer<typeof publicChatSchema>;
+    let payload: PublicAiPayload;
+
+    try {
+      payload = buildPublicAiPayload({
+        body: req.body as { message?: unknown; history?: unknown },
+        file: req.file
+          ? {
+              originalname: req.file.originalname,
+              mimetype: req.file.mimetype,
+              size: req.file.size,
+              buffer: req.file.buffer,
+            }
+          : undefined,
+      });
+    } catch (err) {
+      throw new ValidationError(
+        err instanceof Error ? err.message : 'Permintaan Tanya AI tidak valid.'
+      );
+    }
+
     const reply = await sendPublicChatToGemini(payload);
     res.json({ reply });
   })

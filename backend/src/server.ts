@@ -117,7 +117,12 @@ async function start() {
       logger.info(`✓ Curalyta API running on http://localhost:${config.port}`);
       logger.info(`  Environment: ${config.env}`);
       logger.info(`  CORS origin: ${config.corsOrigin}`);
-      logger.info(`  AI enabled:  ${config.ai.enabled ? 'yes (' + config.ai.model + ')' : 'no (fallback mode)'}`);
+      logger.info(
+        `  Doctor AI enabled: ${config.ai.enabled ? 'yes (' + config.ai.model + ')' : 'no (fallback mode)'}`
+      );
+      logger.info(
+        `  Public AI enabled: ${config.publicAi.enabled ? 'yes (' + config.publicAi.model + ')' : 'no (fallback mode)'}`
+      );
       logger.info('');
       logger.info('  Health:  GET http://localhost:' + config.port + '/api/health');
     });

@@ -1,20 +1,29 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { api, getErrorMessage } from '@/lib/api';
 import { Button, Badge, Input } from '@/components/ui';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
+import {
+  FALLBACK_PUBLIC_AI_ERROR_MESSAGE,
+  resolvePublicAiErrorMessage,
+} from './public-ai-messages';
+import {
+  buildPublicAiRequestPayload,
+  validatePublicAiImageFile,
+  type PublicAiHistoryMessage,
+} from './public-ai-upload';
 import clsx from 'clsx';
 
 type PublicChatMessage = {
   role: 'user' | 'assistant';
   content: string;
+  imagePreviewUrl?: string;
+  imageName?: string;
+  excludeFromHistory?: boolean;
 };
 
 const MAX_HISTORY_MESSAGES = 8;
 const MAX_HISTORY_CONTENT = 900;
-const FALLBACK_MESSAGE =
-  'Tanya AI belum bisa menjawab saat ini. Jika konfigurasi belum aktif, tambahkan GEMINI_API_KEY. Kalau gejala Anda berat atau mendadak memburuk, segera cari bantuan medis langsung.';
-
 const STARTER_PROMPTS = [
   'Saya batuk dan pilek 3 hari, kapan perlu periksa ke dokter?',
   'Apa beda gejala flu, alergi, dan sinusitis?',
@@ -28,6 +37,12 @@ const INITIAL_MESSAGE: PublicChatMessage = {
     'Halo, saya asisten kesehatan umum Curalyta. Silakan tanya gejala umum, langkah awal yang aman, atau kapan sebaiknya ke dokter. Saya tidak menggantikan diagnosis dokter.',
 };
 
+type SelectedPublicAiImage = {
+  file: File;
+  previewUrl: string;
+  name: string;
+};
+
 function summarizeHistoryContent(content: string) {
   const normalized = content.trim().replace(/\s+/g, ' ');
   if (normalized.length <= MAX_HISTORY_CONTENT) return normalized;
@@ -38,15 +53,28 @@ function summarizeHistoryContent(content: string) {
 export function PublicAISection() {
   const [messages, setMessages] = useState<PublicChatMessage[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState<SelectedPublicAiImage | null>(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const previewUrlsRef = useRef<string[]>([]);
   const toast = useToast();
 
-  const history = useMemo(
+  useEffect(() => {
+    return () => {
+      previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      previewUrlsRef.current = [];
+    };
+  }, []);
+
+  const history = useMemo<PublicAiHistoryMessage[]>(
     () =>
       messages
         .filter(
           (message) =>
-            message !== INITIAL_MESSAGE && message.content !== FALLBACK_MESSAGE
+            message !== INITIAL_MESSAGE &&
+            !message.excludeFromHistory &&
+            message.content !== FALLBACK_PUBLIC_AI_ERROR_MESSAGE &&
+            Boolean(message.content.trim())
         )
         .slice(-MAX_HISTORY_MESSAGES)
         .map((message) => ({
@@ -56,32 +84,83 @@ export function PublicAISection() {
     [messages]
   );
 
-  async function sendMessage(messageText: string) {
-    const trimmed = messageText.trim();
-    if (!trimmed || loading) return;
+  function clearSelectedImage() {
+    setSelectedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
 
-    const nextUserMessage: PublicChatMessage = { role: 'user', content: trimmed };
+  function rememberPreviewUrl(url: string) {
+    previewUrlsRef.current.push(url);
+    return url;
+  }
+
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validation = validatePublicAiImageFile({
+      type: file.type,
+      size: file.size,
+    });
+
+    if (!validation.ok) {
+      toast.error(validation.message);
+      event.target.value = '';
+      return;
+    }
+
+    const previewUrl = rememberPreviewUrl(URL.createObjectURL(file));
+    setSelectedImage({
+      file,
+      previewUrl,
+      name: file.name,
+    });
+  }
+
+  async function sendMessage(
+    messageText: string,
+    imageInput: SelectedPublicAiImage | null = selectedImage
+  ) {
+    const trimmed = messageText.trim();
+    if ((!trimmed && !imageInput) || loading) return;
+
+    const nextUserMessage: PublicChatMessage = {
+      role: 'user',
+      content: trimmed,
+      imagePreviewUrl: imageInput?.previewUrl,
+      imageName: imageInput?.name,
+    };
     setMessages((current) => [...current, nextUserMessage]);
     setInput('');
+    clearSelectedImage();
     setLoading(true);
 
     try {
-      const { data } = await api.post<{ reply: string }>('/public/ai-chat', {
+      const request = buildPublicAiRequestPayload({
         message: trimmed,
         history,
+        imageFile: imageInput?.file,
       });
+      const { data } =
+        request.kind === 'form-data'
+          ? await api.post<{ reply: string }>('/public/ai-chat', request.data, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            })
+          : await api.post<{ reply: string }>('/public/ai-chat', request.data);
+
       setMessages((current) => [
         ...current,
         { role: 'assistant', content: data.reply },
       ]);
     } catch (err) {
-      const message = getErrorMessage(err);
+      const message = resolvePublicAiErrorMessage(getErrorMessage(err));
       toast.error(message);
       setMessages((current) => [
         ...current,
         {
           role: 'assistant',
-          content: FALLBACK_MESSAGE,
+          content: message,
+          excludeFromHistory: true,
         },
       ]);
     } finally {
@@ -166,6 +245,25 @@ export function PublicAISection() {
                   )}
                 >
                   {message.content}
+                  {message.imagePreviewUrl && (
+                    <div className={clsx(message.content ? 'mt-3' : '')}>
+                      <img
+                        src={message.imagePreviewUrl}
+                        alt={message.imageName || 'Gambar keluhan pengguna'}
+                        className="max-h-52 w-full rounded-xl object-cover border border-black/5"
+                      />
+                      {message.imageName && (
+                        <div
+                          className={clsx(
+                            'mt-2 text-[11px]',
+                            message.role === 'user' ? 'text-white/80' : 'text-stone-400'
+                          )}
+                        >
+                          {message.imageName}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -188,20 +286,69 @@ export function PublicAISection() {
             }}
             className="p-4 border-t border-stone-100 bg-white"
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleImageChange}
+              disabled={loading}
+            />
+
+            {selectedImage && (
+              <div className="mb-3 rounded-2xl border border-stone-200 bg-stone-50/80 p-3">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={selectedImage.previewUrl}
+                    alt={selectedImage.name}
+                    className="w-20 h-20 rounded-xl object-cover border border-stone-200"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-ink truncate">{selectedImage.name}</div>
+                    <p className="mt-1 text-[12px] text-stone-500">
+                      Foto dipakai sementara untuk membantu analisis lalu langsung dibuang dari server.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSelectedImage}
+                    className="p-2 rounded-xl text-stone-400 hover:text-ink hover:bg-white transition-colors"
+                    aria-label="Hapus gambar"
+                  >
+                    <Icon name="x" size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                className="shrink-0 px-3"
+                title="Tambahkan gambar"
+              >
+                <Icon name="upload" size={15} />
+              </Button>
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Tulis pertanyaan kesehatan umum Anda..."
+                placeholder={selectedImage ? 'Tambahkan penjelasan singkat bila perlu...' : 'Tulis pertanyaan kesehatan umum Anda...'}
                 maxLength={1500}
                 disabled={loading}
               />
-              <Button type="submit" disabled={!input.trim()} loading={loading}>
+              <Button
+                type="submit"
+                disabled={!input.trim() && !selectedImage}
+                loading={loading}
+              >
                 <Icon name="send" size={15} />
               </Button>
             </div>
             <p className="mt-2 text-[11.5px] text-stone-400">
-              Jangan kirim data medis sensitif yang sangat pribadi. Untuk penanganan klinis, tetap konsultasi dengan dokter.
+              Jangan kirim data medis sensitif yang sangat pribadi. Foto hanya dipakai sementara saat diproses. Untuk penanganan klinis, tetap konsultasi dengan dokter.
             </p>
           </form>
         </div>

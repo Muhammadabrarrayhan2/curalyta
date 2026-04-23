@@ -1,7 +1,13 @@
 import dotenv from 'dotenv';
-import path from 'path';
+import fs from 'fs';
+import { resolveEnvFilePaths } from './env-path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+for (const envPath of resolveEnvFilePaths()) {
+  if (!fs.existsSync(envPath)) continue;
+
+  dotenv.config({ path: envPath });
+  break;
+}
 
 function required(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;
@@ -53,6 +59,8 @@ export const config = {
   publicAi: {
     apiKey: optional('GEMINI_API_KEY', ''),
     model: optional('GEMINI_MODEL', 'gemma-3-27b-it'),
+    visionModel: optional('GEMINI_VISION_MODEL', 'gemini-2.5-flash'),
+    imageMaxMB: asNumber('PUBLIC_AI_IMAGE_MAX_MB', 5),
     get enabled() {
       return Boolean(this.apiKey && this.apiKey.length > 10);
     },
@@ -72,3 +80,5 @@ export const config = {
 
 export const isDev = config.env === 'development';
 export const isProd = config.env === 'production';
+
+export { resolveEnvFilePaths } from './env-path';
