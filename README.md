@@ -7,6 +7,8 @@
 
 > **✨ Pembaruan v1.1**: Auto-seed admin saat startup, landing page pasien gaya Alodokter, RSS feed berita kesehatan otomatis (Detik/Kompas/CNN), dan 5-mode auth terpisah (Pasien/Dokter/Admin).
 
+Link: https://curalyta-frontend-hxd7.vercel.app/
+Approved by Dr. Muammar Riyandi
 ---
 
 ## 📋 Daftar Isi
