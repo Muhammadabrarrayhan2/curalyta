@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import { resolveEnvFilePaths } from './env-path';
+import { parseGroqApiKeys } from '../lib/groq';
 
 for (const envPath of resolveEnvFilePaths()) {
   if (!fs.existsSync(envPath)) continue;
@@ -48,22 +49,19 @@ export const config = {
     password: optional('ADMIN_PASSWORD', 'Curalyta#2025'),
   },
 
+  // Groq powers both Doctor AI and public Tanya AI. GROQ_API_KEYS accepts
+  // several comma-separated keys that are rotated per request.
   ai: {
-    apiKey: optional('ANTHROPIC_API_KEY', ''),
-    model: optional('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+    apiKeys: parseGroqApiKeys(optional('GROQ_API_KEYS') || optional('GROQ_API_KEY')),
+    model: optional('GROQ_MODEL', 'openai/gpt-oss-120b'),
+    visionModel: optional('GROQ_VISION_MODEL', 'qwen/qwen3.8-27b'),
     get enabled() {
-      return Boolean(this.apiKey && this.apiKey.length > 10);
+      return this.apiKeys.length > 0;
     },
   },
 
   publicAi: {
-    apiKey: optional('GEMINI_API_KEY', ''),
-    model: optional('GEMINI_MODEL', 'gemma-3-27b-it'),
-    visionModel: optional('GEMINI_VISION_MODEL', 'gemini-2.5-flash'),
     imageMaxMB: asNumber('PUBLIC_AI_IMAGE_MAX_MB', 5),
-    get enabled() {
-      return Boolean(this.apiKey && this.apiKey.length > 10);
-    },
   },
 
   upload: {

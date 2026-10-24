@@ -4,25 +4,28 @@
 
 @layer base {
   :root {
-    --ink: #0A1628;
-    --ink-soft: #1E3A5F;
-    --sage: #5C8B7E;
-    --sage-deep: #3E6B5E;
-    --sage-light: #E8F0EC;
-    --cream: #FAF7F2;
+    --ink: #0F2529;
+    --ink-soft: #1F4A4F;
+    --sage: #0E7C74;
+    --sage-deep: #0A5E58;
+    --sage-light: #E1F1EE;
+    --cream: #F3F6F5;
     --paper: #FFFFFF;
-    --stone-50: #F7F5F0;
-    --stone-100: #EDEBE4;
-    --stone-200: #D9D5CA;
-    --stone-300: #B8B2A3;
-    --stone-400: #8A8576;
-    --stone-500: #5C584D;
-    --stone-600: #3A3832;
-    --accent: #D4704C;
-    --danger: #C14545;
-    --warning: #E0A447;
-    --success: #4A8B6F;
-    --info: #4A6FA5;
+    --stone-50: #F6F8F8;
+    --stone-100: #E7ECEB;
+    --stone-200: #D3DBDA;
+    --stone-300: #AEB9B8;
+    --stone-400: #7D8B8A;
+    --stone-500: #566463;
+    --stone-600: #34403F;
+    --accent: #E8A317;
+    --danger: #D64545;
+    --warning: #D98E04;
+    --success: #16A37A;
+    --info: #2F6FD6;
+
+    /* ECG trace used as the signature underline and in the monitor panel */
+    --ecg-trace: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M0 8 H42 L46 8 L49 2 L53 11 L56 5 L59 8 H120' fill='none' stroke='%230E7C74' stroke-width='1.6' stroke-linejoin='round' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
   }
 
   * { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -32,84 +35,126 @@
     padding: 0;
     background: var(--cream);
     color: var(--ink);
-    font-family: 'Geist', -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 
   body {
     min-height: 100vh;
   }
 
+  ::selection { background: var(--sage-light); color: var(--ink); }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-track { background: var(--stone-50); }
-  ::-webkit-scrollbar-thumb { background: var(--stone-300); border-radius: 6px; border: 2px solid var(--stone-50); }
-  ::-webkit-scrollbar-thumb:hover { background: var(--stone-400); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--stone-200); border-radius: 6px; border: 2px solid var(--cream); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--stone-300); }
 
   /* Focus */
-  *:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
+  *:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; border-radius: 6px; }
 
   /* Number input */
   input[type=number]::-webkit-inner-spin-button,
   input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer components {
-  .font-display { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; letter-spacing: -0.02em; }
-  .font-serif-italic { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; }
+  .font-display {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  /* Emphasized word in headings: heavier weight plus the ECG trace underline. */
+  .font-serif-italic {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-style: normal;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    padding-bottom: 0.14em;
+    background-image: var(--ecg-trace);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 100% 0.32em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.08em] text-stone-400;
+  }
 
   .bg-paper-gradient {
     background-color: var(--cream);
     background-image:
-      radial-gradient(circle at 20% 10%, rgba(92, 139, 126, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at 80% 80%, rgba(212, 112, 76, 0.06) 0%, transparent 40%);
+      radial-gradient(circle at 15% 0%, rgba(14, 124, 116, 0.08) 0%, transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(14, 124, 116, 0.05) 0%, transparent 40%);
   }
 
   .bg-dot-grid {
-    background-image: radial-gradient(circle, rgba(10, 22, 40, 0.08) 1px, transparent 1px);
+    background-image: radial-gradient(circle, rgba(15, 37, 41, 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Faint ECG-paper grid */
+  .bg-ecg-grid {
+    background-image:
+      linear-gradient(rgba(14, 124, 116, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(14, 124, 116, 0.06) 1px, transparent 1px);
     background-size: 24px 24px;
   }
 
   .hero-gradient {
     background:
-      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(92, 139, 126, 0.15), transparent),
-      radial-gradient(ellipse 60% 50% at 80% 100%, rgba(212, 112, 76, 0.08), transparent),
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(14, 124, 116, 0.12), transparent),
       var(--cream);
   }
 
   .number-display {
-    font-family: 'Fraunces', serif;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 500;
+    letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums lining-nums;
   }
 
   .input {
-    @apply w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-lg text-sm text-ink transition-all;
+    @apply w-full px-3.5 py-2.5 bg-white border border-stone-200 rounded-[10px] text-sm text-ink transition-all placeholder:text-stone-400;
   }
+  .input:hover:not(:focus):not(:disabled) { border-color: var(--stone-300); }
   .input:focus {
     outline: none;
     border-color: var(--sage);
-    box-shadow: 0 0 0 3px rgba(92, 139, 126, 0.15);
+    box-shadow: 0 0 0 4px rgba(14, 124, 116, 0.12);
   }
   .input.error {
     border-color: var(--danger);
-    box-shadow: 0 0 0 3px rgba(193, 69, 69, 0.12);
+    box-shadow: 0 0 0 4px rgba(214, 69, 69, 0.10);
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded-[10px] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply bg-ink text-cream;
+    @apply bg-sage-deep text-white;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 2px rgba(10, 94, 88, 0.3);
   }
   .btn-primary:hover:not(:disabled) {
-    background: var(--ink-soft);
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px -8px rgba(10, 22, 40, 0.4);
+    background: var(--ink);
+    box-shadow: 0 8px 20px -8px rgba(15, 37, 41, 0.5);
   }
-  .btn-primary:active:not(:disabled) { transform: translateY(0); }
+  .btn-primary:active:not(:disabled) { transform: translateY(1px); }
 
   .btn-ghost {
-    @apply bg-transparent text-ink border border-stone-200;
+    @apply bg-white text-ink border border-stone-200;
   }
   .btn-ghost:hover:not(:disabled) {
     background: var(--stone-50);
@@ -119,18 +164,18 @@
   .btn-danger {
     @apply bg-clinical-danger text-white;
   }
-  .btn-danger:hover:not(:disabled) { background: #A33838; }
+  .btn-danger:hover:not(:disabled) { background: #B83737; }
 
   .btn-sm { @apply px-3 py-1.5 text-xs; }
   .btn-md { @apply px-4 py-2 text-sm; }
   .btn-lg { @apply px-5 py-2.5 text-[15px]; }
 
   .card {
-    @apply bg-white border border-stone-100 rounded-xl;
+    @apply bg-white border border-stone-100 rounded-2xl shadow-soft;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold;
   }
   .badge-default { @apply bg-stone-100 text-stone-600; }
   .badge-sage { @apply bg-sage-light text-sage-deep; }
@@ -138,28 +183,54 @@
   .badge-warning { @apply bg-amber-50 text-clinical-warning; }
   .badge-success { @apply bg-emerald-50 text-clinical-success; }
   .badge-info { @apply bg-blue-50 text-clinical-info; }
-  .badge-ink { @apply bg-ink text-cream; }
+  .badge-ink { @apply bg-ink text-white; }
 
   .nav-item {
-    @apply flex items-center gap-2.5 px-3 py-2 rounded-lg text-stone-500 text-sm font-medium transition-all cursor-pointer w-full text-left;
+    @apply relative flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-white/60 text-sm font-medium transition-colors cursor-pointer w-full text-left;
   }
-  .nav-item:hover { background: var(--stone-50); color: var(--ink); }
-  .nav-item.active { background: var(--ink); color: var(--cream); }
+  .nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+  .nav-item.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: #4FD1C1;
+  }
 
   .field-label {
-    @apply text-xs font-medium text-stone-600;
+    @apply text-xs font-semibold text-stone-600;
   }
 
   .ai-msg {
-    background: linear-gradient(135deg, rgba(92, 139, 126, 0.08) 0%, rgba(92, 139, 126, 0.03) 100%);
-    border: 1px solid rgba(92, 139, 126, 0.15);
+    background: linear-gradient(135deg, rgba(14, 124, 116, 0.08) 0%, rgba(14, 124, 116, 0.02) 100%);
+    border: 1px solid rgba(14, 124, 116, 0.16);
   }
+
+  /* ECG line that draws itself once (used in loading screen and monitor panel) */
+  .ecg-draw path {
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
+    animation: ecgDraw 1.6s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+  }
+  .ecg-loop path {
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
+    animation: ecgDraw 2.2s linear infinite;
+  }
+  @keyframes ecgDraw { to { stroke-dashoffset: 0; } }
 
   /* Pulse ring */
   @keyframes pulseRing {
-    0% { box-shadow: 0 0 0 0 rgba(92, 139, 126, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(92, 139, 126, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(92, 139, 126, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(14, 124, 116, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(14, 124, 116, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(14, 124, 116, 0); }
   }
   .pulse-ring { animation: pulseRing 2s infinite; }
 

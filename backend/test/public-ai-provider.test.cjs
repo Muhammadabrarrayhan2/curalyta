@@ -15,45 +15,43 @@ test('resolvePublicAiModel switches to vision model when an image is attached', 
 
   assert.equal(
     resolvePublicAiModel({
-      textModel: 'gemma-3-27b-it',
-      visionModel: 'gemini-2.5-flash',
+      textModel: 'openai/gpt-oss-120b',
+      visionModel: 'qwen/qwen3.8-27b',
       hasImage: false,
     }),
-    'gemma-3-27b-it'
+    'openai/gpt-oss-120b'
   );
 
   assert.equal(
     resolvePublicAiModel({
-      textModel: 'gemma-3-27b-it',
-      visionModel: 'gemini-2.5-flash',
+      textModel: 'openai/gpt-oss-120b',
+      visionModel: 'qwen/qwen3.8-27b',
       hasImage: true,
     }),
-    'gemini-2.5-flash'
+    'qwen/qwen3.8-27b'
   );
 });
 
-test('buildPublicAiRequestBody adds inline image data only for image requests', async () => {
-  const { buildPublicAiRequestBody } = await loadProviderModule();
+test('buildPublicAiMessages builds OpenAI-style messages with inline image only for image requests', async () => {
+  const { buildPublicAiMessages } = await loadProviderModule();
 
-  const body = buildPublicAiRequestBody({
+  const messages = buildPublicAiMessages({
     prompt: 'Tolong analisis keluhan ini.',
     history: [{ role: 'assistant', content: 'Halo, ceritakan keluhan Anda.' }],
-    image: {
-      mimeType: 'image/png',
-      buffer: Buffer.from('fake-image'),
-    },
-    supportsSystemInstruction: true,
+    image: { mimeType: 'image/png', buffer: Buffer.from('fake-image') },
     systemInstruction: 'Gunakan bahasa Indonesia.',
   });
 
-  assert.ok(body.contents.length >= 2);
-  assert.equal(body.systemInstruction.parts[0].text, 'Gunakan bahasa Indonesia.');
-  assert.equal(body.contents.at(-1).parts[0].text, 'Tolong analisis keluhan ini.');
-  assert.equal(body.contents.at(-1).parts[1].inline_data.mime_type, 'image/png');
+  assert.deepEqual(messages[0], { role: 'system', content: 'Gunakan bahasa Indonesia.' });
+  assert.deepEqual(messages[1], { role: 'assistant', content: 'Halo, ceritakan keluhan Anda.' });
+  assert.equal(messages[2].content[0].text, 'Tolong analisis keluhan ini.');
   assert.equal(
-    body.contents.at(-1).parts[1].inline_data.data,
-    Buffer.from('fake-image').toString('base64')
+    messages[2].content[1].image_url.url,
+    `data:image/png;base64,${Buffer.from('fake-image').toString('base64')}`
   );
+
+  const textOnly = buildPublicAiMessages({ prompt: 'Batuk', history: [], systemInstruction: 'S' });
+  assert.deepEqual(textOnly.at(-1), { role: 'user', content: 'Batuk' });
 });
 
 test('resolvePublicAiProviderError maps image processing failures to a friendly retry message', async () => {
@@ -62,63 +60,9 @@ test('resolvePublicAiProviderError maps image processing failures to a friendly 
   assert.equal(
     resolvePublicAiProviderError({
       status: 400,
-      details: 'Unable to process input image. Please retry',
+      details: 'Image must have at least 32 pixels in each dimension',
       hasImage: true,
     }),
     'Gambar belum bisa dianalisis. Coba kirim foto yang lebih jelas atau lanjutkan dengan teks saja.'
   );
-});
-
-test('fetchPublicAiResponse retries once after a transient network failure', async () => {
-  const { fetchPublicAiResponse } = await loadProviderModule();
-
-  let attempts = 0;
-  const response = await fetchPublicAiResponse({
-    url: 'https://example.com',
-    apiKey: 'secret',
-    requestBody: { hello: 'world' },
-    attempts: 2,
-    retryDelayMs: 0,
-    fetchImpl: async () => {
-      attempts += 1;
-
-      if (attempts === 1) {
-        throw new TypeError('fetch failed', {
-          cause: { code: 'ECONNRESET', message: 'socket hang up' },
-        });
-      }
-
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    },
-  });
-
-  assert.equal(attempts, 2);
-  assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true });
-});
-
-test('fetchPublicAiResponse retries retryable provider statuses before returning success', async () => {
-  const { fetchPublicAiResponse } = await loadProviderModule();
-
-  let attempts = 0;
-  const response = await fetchPublicAiResponse({
-    url: 'https://example.com',
-    apiKey: 'secret',
-    requestBody: { hello: 'world' },
-    attempts: 2,
-    retryDelayMs: 0,
-    fetchImpl: async () => {
-      attempts += 1;
-
-      if (attempts === 1) {
-        return new Response('busy', { status: 503 });
-      }
-
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    },
-  });
-
-  assert.equal(attempts, 2);
-  assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { ok: true });
 });

@@ -41,7 +41,7 @@ export function DoctorHome() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="font-display text-3xl text-ink">
-            {greeting}, dr. <span className="font-serif-italic">{user?.name.split(' ')[0]}</span>
+            {greeting}, dr. <span className="font-serif-italic">{user?.name.replace(/^dr\.?\s+/i, '').split(' ')[0]}</span>
           </div>
           <div className="text-sm text-stone-500 mt-1">
             Hari ini {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -239,18 +239,29 @@ function KpiCard({
   tone?: 'danger';
 }) {
   return (
-    <div className="card p-5">
-      <div className="flex items-start justify-between mb-3">
+    <div className="card p-5 relative overflow-hidden">
+      <div className="flex items-start justify-between gap-2 mb-5">
+        <div className="eyebrow leading-snug">{label}</div>
         <div
-          className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-            tone === 'danger' ? 'bg-red-50 text-clinical-danger' : 'bg-sage-light text-sage-deep'
+          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+            tone === 'danger' && value > 0 ? 'bg-red-50 text-clinical-danger' : 'bg-sage-light text-sage-deep'
           }`}
         >
-          <Icon name={icon} size={18} />
+          <Icon name={icon} size={16} />
         </div>
       </div>
-      <div className="number-display text-4xl text-ink leading-none mb-1">{value}</div>
-      <div className="text-[12px] text-stone-500">{label}</div>
+      <div
+        className={`number-display text-[44px] leading-none ${
+          tone === 'danger' && value > 0 ? 'text-clinical-danger' : 'text-ink'
+        }`}
+      >
+        {value}
+      </div>
+      <div
+        className={`absolute left-0 right-0 bottom-0 h-[3px] ${
+          tone === 'danger' && value > 0 ? 'bg-clinical-danger' : 'bg-sage/25'
+        }`}
+      />
     </div>
   );
 }

@@ -84,10 +84,3 @@ test('finalizePublicAiReply keeps opening greeting on the first turn', async () 
 
   assert.match(result, /^Halo!/i);
 });
-
-test('modelSupportsPublicAiSystemInstruction only enables system instruction for Gemini models', async () => {
-  const { modelSupportsPublicAiSystemInstruction } = await loadPublicAiModule();
-
-  assert.equal(modelSupportsPublicAiSystemInstruction('gemini-2.5-flash'), true);
-  assert.equal(modelSupportsPublicAiSystemInstruction('gemma-3-27b-it'), false);
-});

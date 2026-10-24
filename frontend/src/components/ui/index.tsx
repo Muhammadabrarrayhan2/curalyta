@@ -272,11 +272,16 @@ export function LoadingScreen() {
           <Icon name="logo" size={28} className="text-ink" />
           <span className="font-display text-xl text-ink">Curalyta</span>
         </div>
-        <div className="mt-4 flex items-center justify-center gap-1.5">
-          <span className="typing-dot w-2 h-2 rounded-full bg-sage inline-block" />
-          <span className="typing-dot w-2 h-2 rounded-full bg-sage inline-block" />
-          <span className="typing-dot w-2 h-2 rounded-full bg-sage inline-block" />
-        </div>
+        <svg viewBox="0 0 160 32" className="ecg-loop mt-4 w-40 h-8 mx-auto" role="img" aria-label="Memuat">
+          <path
+            d="M0 20 H52 l5 -3 l5 3 H74 l4 5 l6 -22 l6 26 l5 -9 H112 l8 -5 l8 5 H160"
+            fill="none"
+            stroke="var(--sage)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        </svg>
       </div>
     </div>
   );

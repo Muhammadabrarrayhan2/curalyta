@@ -297,6 +297,8 @@ adminRouter.get(
         env: config.env,
         aiEnabled: config.ai.enabled,
         aiModel: config.ai.enabled ? config.ai.model : null,
+        aiProvider: 'Groq',
+        aiKeyCount: config.ai.apiKeys.length,
         uploadLimitMB: config.upload.maxMB,
       },
     });

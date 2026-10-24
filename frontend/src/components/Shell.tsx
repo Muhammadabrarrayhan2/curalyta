@@ -86,15 +86,10 @@ export function Shell({ navItems, title, subtitle, roleLabel, roleIcon, children
   return (
     <div className="flex min-h-screen bg-cream">
       {/* Sidebar — desktop */}
-      <aside className="hidden md:flex flex-col w-60 border-r border-stone-100 bg-white sticky top-0 h-screen shrink-0">
-        <div className="p-5 border-b border-stone-100 flex items-center gap-2">
-          <Icon name="logo" size={24} className="text-ink" />
-          <div>
-            <div className="font-display font-semibold text-ink leading-none">Curalyta</div>
-            <div className="text-[10px] text-stone-400 mt-0.5 tracking-wider uppercase">{roleLabel} workspace</div>
-          </div>
-        </div>
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+      <aside className="hidden md:flex flex-col w-60 bg-ink text-white sticky top-0 h-screen shrink-0">
+        <BrandMark roleLabel={roleLabel} />
+        <nav className="flex-1 px-3 pt-2 space-y-0.5 overflow-y-auto">
+          <div className="eyebrow !text-white/35 px-3 pb-2">Menu</div>
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -104,19 +99,19 @@ export function Shell({ navItems, title, subtitle, roleLabel, roleIcon, children
             >
               <Icon name={item.icon} size={16} />
               <span className="flex-1">{item.label}</span>
-              {item.badge != null && item.badge > 0 && <Badge tone="ink">{item.badge}</Badge>}
+              {item.badge != null && item.badge > 0 && <Badge tone="sage">{item.badge}</Badge>}
             </NavLink>
           ))}
         </nav>
-        <div className="p-3 border-t border-stone-100">
+        <div className="p-3 border-t border-white/10">
           <button
             onClick={() => navigate(navItems[0].to.replace(/\/[^/]*$/, '/profile'))}
-            className="w-full p-2.5 rounded-lg hover:bg-stone-50 flex items-center gap-3 transition-colors"
+            className="w-full p-2.5 rounded-[10px] hover:bg-white/5 flex items-center gap-3 transition-colors"
           >
-            <Avatar name={user.name} size="sm" />
+            <Avatar name={user.name} size="sm" className="!from-sage !to-sage-deep" />
             <div className="flex-1 text-left min-w-0">
-              <div className="text-[13px] font-medium text-ink truncate">{user.name}</div>
-              <div className="text-[11px] text-stone-400 truncate">{user.email}</div>
+              <div className="text-[13px] font-semibold text-white truncate">{user.name}</div>
+              <div className="text-[11px] text-white/45 truncate">{user.email}</div>
             </div>
           </button>
           <button onClick={handleLogout} className="nav-item mt-1">
@@ -129,17 +124,14 @@ export function Shell({ navItems, title, subtitle, roleLabel, roleIcon, children
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-ink/40" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-white p-4 flex flex-col animate-slide-in">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Icon name="logo" size={24} className="text-ink" />
-                <span className="font-display font-semibold">Curalyta</span>
-              </div>
-              <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg hover:bg-stone-50">
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-ink text-white flex flex-col animate-slide-in">
+            <div className="flex items-center justify-between pr-3">
+              <BrandMark roleLabel={roleLabel} />
+              <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg hover:bg-white/10" aria-label="Tutup menu">
                 <Icon name="x" />
               </button>
             </div>
-            <nav className="flex-1 space-y-0.5 overflow-y-auto">
+            <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
               {navItems.map((item) => (
                 <NavLink
                   key={item.to}
@@ -152,24 +144,26 @@ export function Shell({ navItems, title, subtitle, roleLabel, roleIcon, children
                 </NavLink>
               ))}
             </nav>
-            <button onClick={handleLogout} className="nav-item mt-2 border-t border-stone-100 pt-3">
-              <Icon name="logout" size={16} /> Keluar
-            </button>
+            <div className="p-3 border-t border-white/10">
+              <button onClick={handleLogout} className="nav-item">
+                <Icon name="logout" size={16} /> Keluar
+              </button>
+            </div>
           </aside>
         </div>
       )}
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="sticky top-0 z-30 bg-cream/90 backdrop-blur border-b border-stone-100">
+        <header className="sticky top-0 z-30 bg-cream/85 backdrop-blur-md border-b border-stone-200/70">
           <div className="px-5 md:px-8 py-3.5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setMobileOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-stone-100">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => setMobileOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-stone-100" aria-label="Buka menu">
                 <Icon name="menu" />
               </button>
-              <div>
-                <div className="text-[11px] text-stone-400 uppercase tracking-wider">{subtitle || roleLabel}</div>
-                <h1 className="font-display text-xl text-ink leading-tight">{title || 'Dashboard'}</h1>
+              <div className="min-w-0">
+                <div className="eyebrow truncate">{subtitle || roleLabel}</div>
+                <h1 className="font-display text-xl text-ink leading-tight mt-0.5 truncate">{title || 'Dashboard'}</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -234,7 +228,21 @@ export function Shell({ navItems, title, subtitle, roleLabel, roleIcon, children
           </div>
         </header>
 
-        <main className="flex-1 p-5 md:p-8 overflow-x-hidden">{children}</main>
+        <main className="flex-1 p-5 md:p-8 overflow-x-hidden animate-rise">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+function BrandMark({ roleLabel }: { roleLabel: string }) {
+  return (
+    <div className="px-5 pt-5 pb-4 flex items-center gap-2.5">
+      <div className="w-9 h-9 rounded-[10px] bg-white/[0.07] ring-1 ring-white/10 flex items-center justify-center">
+        <Icon name="logo" size={20} className="text-[#4FD1C1]" />
+      </div>
+      <div>
+        <div className="font-display font-extrabold text-[17px] text-white leading-none tracking-tight">Curalyta</div>
+        <div className="font-mono text-[9.5px] text-white/45 mt-1 tracking-[0.14em] uppercase">{roleLabel} workspace</div>
       </div>
     </div>
   );

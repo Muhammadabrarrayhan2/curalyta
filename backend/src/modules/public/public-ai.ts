@@ -50,10 +50,6 @@ export function buildPublicAiPrompt(message: string) {
   });
 }
 
-export function modelSupportsPublicAiSystemInstruction(model: string) {
-  return /^gemini-/i.test(model.trim());
-}
-
 export function buildPublicAiCaseHint(message: string) {
   const normalized = normalizeText(message).toLowerCase();
   const hints: string[] = [];

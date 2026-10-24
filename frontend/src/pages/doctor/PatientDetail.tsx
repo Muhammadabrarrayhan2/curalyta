@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { api, getErrorMessage } from '@/lib/api';
 import { Avatar, Badge, Button, Empty, Field, Input, Modal, Tabs, Spinner } from '@/components/ui';
+import { AiMarkdown } from '@/components/ui/AiMarkdown';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import {
@@ -191,7 +192,7 @@ export function PatientDetail() {
               <span className="ml-2">Menganalisis data klinis...</span>
             </div>
           ) : (
-            <div className="text-[14px] text-stone-600 leading-relaxed whitespace-pre-wrap">{aiSummary}</div>
+            <AiMarkdown content={aiSummary} className="text-[14px] text-stone-600 leading-relaxed" />
           )}
           <div className="mt-3 pt-3 border-t border-stone-100 text-[11px] text-stone-400 italic">
             Ringkasan AI — untuk mendukung review klinis, bukan pengganti penilaian dokter.
@@ -772,10 +773,10 @@ function AIChatModal({ open, onClose, patientId, patientName }: { open: boolean;
           )}
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-lg p-3 text-[13.5px] leading-relaxed whitespace-pre-wrap ${
-                m.role === 'user' ? 'bg-ink text-cream' : 'ai-msg'
+              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed ${
+                m.role === 'user' ? 'bg-ink text-white rounded-br-md whitespace-pre-wrap' : 'ai-msg rounded-bl-md text-stone-600'
               }`}>
-                {m.content}
+                {m.role === 'user' ? m.content : <AiMarkdown content={m.content} />}
               </div>
             </div>
           ))}

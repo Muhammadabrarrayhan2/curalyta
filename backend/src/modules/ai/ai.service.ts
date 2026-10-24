@@ -1,29 +1,26 @@
 /**
- * AI Service — Anthropic Claude integration
+ * AI Service — Groq integration with rotating API keys
  *
- * GRACEFUL FALLBACK: If ANTHROPIC_API_KEY is not configured, the service
+ * GRACEFUL FALLBACK: If GROQ_API_KEYS is not configured, the service
  * reports as disabled and throws a user-friendly error. The rest of the
  * platform continues to function fully without AI.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { config } from '../../config';
 import { ServiceUnavailableError } from '../../lib/errors';
 import { logger } from '../../lib/logger';
+import { GroqApiError, createGroqKeyRotator, groqChatCompletion } from '../../lib/groq';
 import type { Patient, Observation, VitalSign } from '@prisma/client';
 
-let client: Anthropic | null = null;
+/** Shared by Doctor AI and public Tanya AI so rotation spans both features. */
+export const groqRotator = createGroqKeyRotator(config.ai.apiKeys);
 
-function getClient(): Anthropic {
+function ensureEnabled() {
   if (!config.ai.enabled) {
     throw new ServiceUnavailableError(
       'AI Assistant belum dikonfigurasi. Hubungi administrator untuk mengaktifkan.'
     );
   }
-  if (!client) {
-    client = new Anthropic({ apiKey: config.ai.apiKey });
-  }
-  return client;
 }
 
 const SYSTEM_PROMPT_CLINICAL = `Anda adalah asisten klinis untuk dokter yang menggunakan Curalyta, sebuah platform kesehatan digital.
@@ -61,39 +58,31 @@ export const aiService = {
     messages: ChatMessage[],
     opts: { systemPrompt?: string; maxTokens?: number } = {}
   ): Promise<string> {
-    const c = getClient();
+    ensureEnabled();
 
     try {
-      const response = await c.messages.create({
+      const text = await groqChatCompletion({
+        rotator: groqRotator,
         model: config.ai.model,
-        max_tokens: opts.maxTokens ?? 1500,
-        system: opts.systemPrompt ?? SYSTEM_PROMPT_CLINICAL,
-        messages: messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        maxTokens: opts.maxTokens ?? 2000,
+        messages: [
+          { role: 'system', content: opts.systemPrompt ?? SYSTEM_PROMPT_CLINICAL },
+          ...messages.map((m) => ({ role: m.role, content: m.content })),
+        ],
       });
-
-      const text = response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-        .trim();
 
       return text || 'Maaf, tidak ada respons yang dihasilkan. Coba pertanyaan lain.';
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('AI service error', { message });
+      const status = err instanceof GroqApiError ? err.status : undefined;
+      logger.error('AI service error', { message, status });
 
-      if (
-        message.toLowerCase().includes('api key') ||
-        message.toLowerCase().includes('authentication')
-      ) {
+      if (status === 401 || status === 403) {
         throw new ServiceUnavailableError(
           'Konfigurasi AI bermasalah. Hubungi administrator.'
         );
       }
-      if (message.toLowerCase().includes('rate')) {
+      if (status === 429) {
         throw new ServiceUnavailableError(
           'AI sedang sibuk, coba lagi beberapa saat.'
         );

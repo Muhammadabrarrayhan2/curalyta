@@ -15,16 +15,16 @@ import {
   buildPublicAiPromptWithOptions,
   clampHistoryContent,
   finalizePublicAiReply,
-  modelSupportsPublicAiSystemInstruction,
 } from './public-ai';
+import { GroqApiError, groqChatCompletion } from '../../lib/groq';
+import { groqRotator } from '../ai/ai.service';
 import {
   buildPublicAiPayload,
   type PublicAiPayload,
 } from './public-ai-upload';
 import { createPublicAiImageUploadMiddleware } from './public-ai-upload-middleware';
 import {
-  buildPublicAiRequestBody,
-  fetchPublicAiResponse,
+  buildPublicAiMessages,
   resolvePublicAiModel,
   resolvePublicAiProviderError,
 } from './public-ai-provider';
@@ -41,97 +41,47 @@ const listSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).default(12),
 });
 
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string;
-      }>;
-    };
-  }>;
-}
-
 const publicAiImageUpload = createPublicAiImageUploadMiddleware(
   config.publicAi.imageMaxMB
 );
 
-async function sendPublicChatToGemini(payload: PublicAiPayload): Promise<string> {
-  if (!config.publicAi.enabled) {
+async function sendPublicChatToGroq(payload: PublicAiPayload): Promise<string> {
+  if (!config.ai.enabled) {
     throw new ServiceUnavailableError(
-      'Fitur Tanya AI belum dikonfigurasi. Tambahkan GEMINI_API_KEY agar bisa dipakai publik.'
+      'Fitur Tanya AI belum dikonfigurasi. Tambahkan GROQ_API_KEYS agar bisa dipakai publik.'
     );
   }
+
+  const hasImage = Boolean(payload.image);
+  const model = resolvePublicAiModel({
+    textModel: config.ai.model,
+    visionModel: config.ai.visionModel,
+    hasImage,
+  });
 
   try {
     const sanitizedHistory = payload.history.map((item) => ({
       role: item.role,
       content: clampHistoryContent(item.content),
     }));
-    const hasImage = Boolean(payload.image);
-    const model = resolvePublicAiModel({
-      textModel: config.publicAi.model,
-      visionModel: config.publicAi.visionModel,
-      hasImage,
+    const prompt = buildPublicAiPromptWithOptions(payload.message, { hasImage });
+
+    const text = await groqChatCompletion({
+      rotator: groqRotator,
+      model,
+      maxTokens: 1024,
+      messages: buildPublicAiMessages({
+        prompt,
+        history: sanitizedHistory,
+        image: payload.image
+          ? {
+              mimeType: payload.image.mimeType,
+              buffer: payload.image.buffer,
+            }
+          : undefined,
+        systemInstruction: PUBLIC_AI_SYSTEM_INSTRUCTION,
+      }),
     });
-    const supportsSystemInstruction = modelSupportsPublicAiSystemInstruction(model);
-    const prompt = buildPublicAiPromptWithOptions(payload.message, {
-      inlineSystemInstruction: !supportsSystemInstruction,
-      hasImage,
-    });
-    const requestBody = buildPublicAiRequestBody({
-      prompt,
-      history: sanitizedHistory,
-      image: payload.image
-        ? {
-            mimeType: payload.image.mimeType,
-            buffer: payload.image.buffer,
-          }
-        : undefined,
-      supportsSystemInstruction,
-      systemInstruction: PUBLIC_AI_SYSTEM_INSTRUCTION,
-    });
-
-    const response = await fetchPublicAiResponse({
-      url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      apiKey: config.publicAi.apiKey,
-      requestBody,
-    });
-
-    if (!response.ok) {
-      const details = await response.text();
-      logger.error('Public AI provider error', {
-        status: response.status,
-        details,
-        hasImage,
-        model,
-      });
-
-      if (response.status === 401 || response.status === 403) {
-        throw new ServiceUnavailableError(
-          'Konfigurasi Gemini bermasalah. Periksa GEMINI_API_KEY atau model yang dipakai.'
-        );
-      }
-
-      if (response.status === 400 || response.status === 429) {
-        throw new ServiceUnavailableError(
-          resolvePublicAiProviderError({
-            status: response.status,
-            details,
-            hasImage,
-          })
-        );
-      }
-
-      throw new ServiceUnavailableError(
-        'Tanya AI sedang tidak tersedia. Silakan coba lagi sebentar lagi.'
-      );
-    }
-
-    const data = (await response.json()) as GeminiResponse;
-    const text = data.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text?.trim())
-      .filter(Boolean)
-      .join('\n');
 
     if (!text) {
       throw new ServiceUnavailableError(
@@ -144,6 +94,29 @@ async function sendPublicChatToGemini(payload: PublicAiPayload): Promise<string>
     });
   } catch (err) {
     if (err instanceof ServiceUnavailableError) throw err;
+
+    if (err instanceof GroqApiError) {
+      logger.error('Public AI provider error', {
+        status: err.status,
+        details: err.details,
+        hasImage,
+        model,
+      });
+
+      if (err.status === 401 || err.status === 403) {
+        throw new ServiceUnavailableError(
+          'Konfigurasi Groq bermasalah. Periksa GROQ_API_KEYS atau model yang dipakai.'
+        );
+      }
+
+      throw new ServiceUnavailableError(
+        resolvePublicAiProviderError({
+          status: err.status,
+          details: err.details,
+          hasImage,
+        })
+      );
+    }
 
     const message = err instanceof Error ? err.message : 'Unknown error';
     logger.error('Public AI unexpected error', { message });
@@ -291,7 +264,7 @@ publicRouter.post(
       );
     }
 
-    const reply = await sendPublicChatToGemini(payload);
+    const reply = await sendPublicChatToGroq(payload);
     res.json({ reply });
   })
 );

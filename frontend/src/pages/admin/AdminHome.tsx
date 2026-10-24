@@ -19,7 +19,7 @@ export function AdminHome() {
   const { data: sysData } = useQuery({
     queryKey: ['admin', 'system'],
     queryFn: async () => {
-      const { data } = await api.get<{ system: { env: string; aiEnabled: boolean; aiModel: string | null; uploadLimitMB: number } }>('/admin/system');
+      const { data } = await api.get<{ system: { env: string; aiEnabled: boolean; aiModel: string | null; aiProvider?: string; aiKeyCount?: number; uploadLimitMB: number } }>('/admin/system');
       return data.system;
     },
   });
@@ -109,7 +109,10 @@ export function AdminHome() {
               <Row label="AI Status">
                 {sysData?.aiEnabled ? <Badge tone="success">Aktif</Badge> : <Badge tone="default">Tidak aktif</Badge>}
               </Row>
-              {sysData?.aiEnabled && <Row label="AI Model"><span className="font-mono text-[12px]">{sysData.aiModel}</span></Row>}
+              {sysData?.aiEnabled && <Row label="AI Model"><span className="font-mono text-[12px]">{sysData.aiProvider ? `${sysData.aiProvider} · ` : ''}{sysData.aiModel}</span></Row>}
+              {sysData?.aiEnabled && sysData.aiKeyCount != null && (
+                <Row label="Rotasi API key"><span className="font-mono text-[12px]">{sysData.aiKeyCount} key aktif</span></Row>
+              )}
               <Row label="Upload Limit"><span className="font-mono">{sysData?.uploadLimitMB} MB</span></Row>
             </div>
           </div>

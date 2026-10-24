@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, getErrorMessage } from '@/lib/api';
 import { Badge, Button, Empty, Spinner } from '@/components/ui';
+import { AiMarkdown } from '@/components/ui/AiMarkdown';
 import { Icon } from '@/components/ui/Icon';
 import { useToast } from '@/components/ui/Toast';
 import { relativeTime } from '@/lib/format';
@@ -58,7 +59,7 @@ export function DoctorAI() {
   async function send() {
     if (!input.trim() || sending) return;
     if (!aiStatus?.enabled) {
-      toast.error('AI belum dikonfigurasi. Minta admin mengaktifkan ANTHROPIC_API_KEY.');
+      toast.error('AI belum dikonfigurasi. Minta admin mengisi GROQ_API_KEYS.');
       return;
     }
     const userMsg = input.trim();
@@ -154,7 +155,7 @@ export function DoctorAI() {
                 <div>
                   <div className="font-medium text-ink mb-1">AI belum dikonfigurasi</div>
                   <p className="text-sm text-stone-500 leading-relaxed">
-                    Platform berfungsi penuh tanpa AI. Untuk mengaktifkan fitur AI, administrator perlu mengisi <code className="bg-stone-100 px-1 rounded">ANTHROPIC_API_KEY</code> di file environment backend.
+                    Platform berfungsi penuh tanpa AI. Untuk mengaktifkan fitur AI, administrator perlu mengisi <code className="bg-stone-100 px-1 rounded">GROQ_API_KEYS</code> (boleh beberapa key dipisah koma, akan dirotasi otomatis) di file environment backend.
                   </p>
                 </div>
               </div>
@@ -169,10 +170,10 @@ export function DoctorAI() {
           )}
           {allMessages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-lg p-3 text-[13.5px] leading-relaxed whitespace-pre-wrap ${
-                m.role === 'user' ? 'bg-ink text-cream' : 'ai-msg'
+              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed ${
+                m.role === 'user' ? 'bg-ink text-white rounded-br-md whitespace-pre-wrap' : 'ai-msg rounded-bl-md text-stone-600'
               }`}>
-                {m.content}
+                {m.role === 'user' ? m.content : <AiMarkdown content={m.content} />}
               </div>
             </div>
           ))}

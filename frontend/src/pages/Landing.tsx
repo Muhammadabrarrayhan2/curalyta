@@ -152,17 +152,12 @@ export function Landing() {
 
       {/* ============ HERO ============ */}
       <section className="relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 bg-cream" />
         <div
-          className="absolute inset-0 -z-10"
+          className="absolute inset-0 -z-10 bg-ecg-grid"
           style={{
-            background: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 50%, #FAF7F2 100%)',
-          }}
-        />
-        <div
-          className="absolute inset-0 -z-10 opacity-[0.5]"
-          style={{
-            backgroundImage: `radial-gradient(circle at 20% 30%, rgba(92, 139, 126, 0.15) 0%, transparent 60%),
-                              radial-gradient(circle at 80% 70%, rgba(74, 144, 226, 0.12) 0%, transparent 55%)`,
+            maskImage: 'radial-gradient(ellipse 70% 80% at 70% 40%, #000 30%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 70% 80% at 70% 40%, #000 30%, transparent 75%)',
           }}
         />
 
@@ -221,40 +216,25 @@ export function Landing() {
               </div>
             </div>
 
-            {/* Right side - decorative doctor illustration */}
+            {/* Right side - patient monitor panel (what doctors see in Curalyta) */}
             <div className="relative hidden lg:block">
-              <div className="relative aspect-[4/5] max-w-md ml-auto">
-                <div
-                  className="absolute inset-0 rounded-full opacity-20 blur-3xl"
-                  style={{ background: 'radial-gradient(circle, #5C8B7E 0%, transparent 70%)' }}
-                />
-                <div className="relative h-full flex items-end justify-center">
-                  {/* Clean SVG illustration — no external image needed */}
-                  <DoctorIllustration />
-                </div>
-              </div>
+              <PatientMonitor />
 
-              {/* Floating cards */}
-              <div className="absolute top-8 left-4 bg-white rounded-2xl shadow-xl p-4 max-w-[200px] border border-stone-100 animate-[float_4s_ease-in-out_infinite]">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-8 h-8 rounded-full bg-sage-light flex items-center justify-center">
-                    <Icon name="stethoscope" size={14} className="text-sage-deep" />
+              <div className="absolute -bottom-12 left-8 bg-white rounded-2xl shadow-lift p-4 w-[230px] border border-stone-100 animate-rise [animation-delay:600ms]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-[10px] bg-sage-light flex items-center justify-center">
+                    <Icon name="stethoscope" size={16} className="text-sage-deep" />
                   </div>
-                  <span className="text-xs font-semibold text-ink">
-                    {stats?.doctorCount ?? '—'}+ Dokter
-                  </span>
-                </div>
-                <p className="text-[11px] text-stone-500">Tersedia di berbagai spesialisasi</p>
-              </div>
-
-              <div className="absolute bottom-16 right-0 bg-white rounded-2xl shadow-xl p-4 max-w-[220px] border border-stone-100 animate-[float_4s_ease-in-out_infinite_1s]">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                    <Icon name="sparkles" size={14} className="text-blue-600" />
+                  <div>
+                    <div className="number-display text-lg text-ink leading-none">
+                      {stats?.doctorCount ?? '—'}
+                      <span className="font-sans text-xs font-semibold text-stone-500 tracking-normal ml-1.5">dokter terverifikasi</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 mt-1">
+                      {stats?.specializationCount ?? '—'} spesialisasi tersedia
+                    </p>
                   </div>
-                  <span className="text-xs font-semibold text-ink">AI Assistant</span>
                 </div>
-                <p className="text-[11px] text-stone-500">Ringkasan pemeriksaan otomatis untuk dokter</p>
               </div>
             </div>
           </div>
@@ -748,79 +728,75 @@ function MiniStat({ label, value, unit, tone }: { label: string; value: string; 
   );
 }
 
-function DoctorIllustration() {
+// Illustrative monitor panel — sample values, mirrors the doctor workspace.
+function PatientMonitor() {
+  const readouts = [
+    { label: 'HR', value: '88', unit: 'bpm', tone: 'text-[#4FD1C1]' },
+    { label: 'TD', value: '160/100', unit: 'mmHg', tone: 'text-[#F4C766]' },
+    { label: 'SpO₂', value: '97', unit: '%', tone: 'text-[#7CC4FF]' },
+    { label: 'Suhu', value: '36.8', unit: '°C', tone: 'text-white' },
+  ];
+
   return (
-    <svg viewBox="0 0 400 500" className="w-full h-full drop-shadow-2xl" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="coat" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset="1" stopColor="#f0f4f2" />
-        </linearGradient>
-        <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#f4cdab" />
-          <stop offset="1" stopColor="#e0b088" />
-        </linearGradient>
-        <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3d2817" />
-          <stop offset="1" stopColor="#1f1309" />
-        </linearGradient>
-      </defs>
+    <div className="relative ml-auto max-w-[480px] rounded-[22px] bg-ink text-white p-5 shadow-lift ring-1 ring-black/5 animate-rise">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="relative flex w-2.5 h-2.5">
+            <span className="absolute inset-0 rounded-full bg-[#4FD1C1] opacity-60 animate-ping" />
+            <span className="relative w-2.5 h-2.5 rounded-full bg-[#4FD1C1]" />
+          </span>
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-white/55">Pemantauan pasien</span>
+        </div>
+        <span className="rounded-md bg-[#F4C766]/15 text-[#F4C766] font-mono text-[11px] font-semibold px-2 py-1">NEWS2 · 5</span>
+      </div>
 
-      {/* Circle bg */}
-      <circle cx="200" cy="250" r="200" fill="#E8F0EC" opacity="0.4" />
+      <div className="mt-5 flex items-end justify-between gap-4">
+        <div>
+          <div className="text-[15px] font-bold tracking-tight">Budi S. · 55 th</div>
+          <div className="text-[12px] text-white/50 mt-0.5">Hipertensi · kontrol minggu ke-4</div>
+        </div>
+        <div className="font-mono text-[11px] text-white/40">II · 25 mm/s</div>
+      </div>
 
-      {/* Body (coat) */}
-      <path
-        d="M 90 500 L 90 320 Q 90 260 160 250 L 240 250 Q 310 260 310 320 L 310 500 Z"
-        fill="url(#coat)"
-      />
-      <path d="M 200 250 L 200 500" stroke="#d0d8d4" strokeWidth="2" />
+      <div className="relative mt-4 h-[92px] rounded-xl bg-white/[0.03] ring-1 ring-white/[0.06] overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(79,209,193,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(79,209,193,.08) 1px, transparent 1px)',
+            backgroundSize: '12px 12px',
+          }}
+        />
+        <svg viewBox="0 0 480 92" preserveAspectRatio="none" className="ecg-loop absolute inset-0 w-full h-full" aria-hidden="true">
+          <path
+            d="M0 56 H58 l6 -4 l6 4 H92 l5 6 l7 -46 l7 58 l6 -18 H158 l10 -8 l10 8 H230 l6 -4 l6 4 H264 l5 6 l7 -46 l7 58 l6 -18 H330 l10 -8 l10 8 H402 l6 -4 l6 4 H436 l5 6 l7 -46 l7 58 l6 -18 H480"
+            fill="none"
+            stroke="#4FD1C1"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            style={{ strokeDasharray: 1400, strokeDashoffset: 1400 }}
+          />
+        </svg>
+      </div>
 
-      {/* Stethoscope */}
-      <path
-        d="M 165 270 Q 150 320 165 360 M 235 270 Q 250 320 235 360"
-        fill="none"
-        stroke="#3E6B5E"
-        strokeWidth="4"
-        strokeLinecap="round"
-      />
-      <circle cx="200" cy="370" r="14" fill="#5C8B7E" />
-      <circle cx="200" cy="370" r="8" fill="#3E6B5E" />
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        {readouts.map((r) => (
+          <div key={r.label} className="rounded-xl bg-white/[0.04] ring-1 ring-white/[0.06] px-3 py-2.5">
+            <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-white/40">{r.label}</div>
+            <div className={`number-display text-[22px] leading-tight mt-1 ${r.tone}`}>{r.value}</div>
+            <div className="font-mono text-[10px] text-white/35">{r.unit}</div>
+          </div>
+        ))}
+      </div>
 
-      {/* Tie */}
-      <path d="M 192 260 L 208 260 L 214 275 L 200 340 L 186 275 Z" fill="#4A6FA5" />
-
-      {/* Neck */}
-      <rect x="185" y="225" width="30" height="40" fill="url(#skin)" />
-
-      {/* Head */}
-      <ellipse cx="200" cy="180" rx="60" ry="70" fill="url(#skin)" />
-
-      {/* Hair */}
-      <path
-        d="M 145 170 Q 140 110 200 105 Q 260 110 255 170 Q 250 140 200 140 Q 150 140 145 170"
-        fill="url(#hair)"
-      />
-
-      {/* Eyes */}
-      <ellipse cx="180" cy="185" rx="4" ry="5" fill="#1f1309" />
-      <ellipse cx="220" cy="185" rx="4" ry="5" fill="#1f1309" />
-      <circle cx="181" cy="183" r="1" fill="white" />
-      <circle cx="221" cy="183" r="1" fill="white" />
-
-      {/* Eyebrows */}
-      <path d="M 170 175 Q 180 172 190 175" stroke="#3d2817" strokeWidth="2" fill="none" strokeLinecap="round" />
-      <path d="M 210 175 Q 220 172 230 175" stroke="#3d2817" strokeWidth="2" fill="none" strokeLinecap="round" />
-
-      {/* Smile */}
-      <path d="M 185 215 Q 200 225 215 215" stroke="#8b5a3c" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-
-      {/* Badge on coat */}
-      <rect x="230" y="290" width="30" height="40" rx="3" fill="#5C8B7E" opacity="0.15" />
-      <rect x="230" y="290" width="30" height="40" rx="3" fill="none" stroke="#5C8B7E" strokeWidth="1" />
-      <circle cx="245" cy="305" r="5" fill="#5C8B7E" />
-      <rect x="236" y="315" width="18" height="2" fill="#5C8B7E" opacity="0.5" />
-      <rect x="236" y="319" width="14" height="2" fill="#5C8B7E" opacity="0.5" />
-    </svg>
+      <div className="mt-4 rounded-xl bg-[#4FD1C1]/[0.08] ring-1 ring-[#4FD1C1]/20 p-3.5 flex gap-3">
+        <Icon name="sparkles" size={16} className="text-[#4FD1C1] shrink-0 mt-0.5" />
+        <p className="text-[12.5px] leading-relaxed text-white/75">
+          <span className="font-semibold text-white">Ringkasan AI:</span> tekanan darah tetap tinggi di 3 kunjungan
+          terakhir. Pertimbangkan evaluasi kepatuhan obat dan target terapi.
+        </p>
+      </div>
+    </div>
   );
 }
