@@ -17,15 +17,7 @@ import { authLimiter } from '../middleware/rateLimit';
 
 export const apiRouter = Router();
 
-// Health
-apiRouter.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'curalyta-api',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-  });
-});
+// Health: GET /api/health is registered in server.ts ahead of the rate limiter.
 
 // Auth — with tighter rate limit
 apiRouter.use('/auth', authLimiter, authRouter);

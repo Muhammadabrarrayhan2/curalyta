@@ -1,0 +1,23 @@
+# Keep the build context small and never ship secrets into images.
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+!.env.docker.example
+.git
+.github
+docs
+ops
+src
+index.html
+vite.config.js
+postcss.config.js
+tailwind.config.js
+scripts
+backend/uploads/*
+backend/test
+frontend/test
+**/*.log
+**/*.tsbuildinfo
+**/coverage

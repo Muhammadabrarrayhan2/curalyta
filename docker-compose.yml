@@ -1,40 +1,46 @@
 # ============================================================
-# Curalyta — Full-stack docker-compose
+# Curalyta — production-style stack
 #
-# Usage:
-#   1. Copy .env.docker.example to .env and adjust values
-#   2. docker-compose up --build
+#   nginx     : reverse proxy, the ONLY service publishing ports (80/443)
+#   frontend  : React SPA served by unprivileged nginx (internal :8080)
+#   backend   : Express + Prisma API (internal :4000, migrates on start)
+#   postgres  : PostgreSQL 16 with a named volume (internal only)
 #
-# Services:
-#   - postgres  : PostgreSQL 16 database
-#   - backend   : Express + Prisma API (runs migrations on startup)
-#   - frontend  : React + Vite app served via nginx (with API proxy)
+# Local:   cp .env.example .env  (fill the required values)
+#          docker compose up -d --build
+# VM:      images come from Artifact Registry (BACKEND_IMAGE/FRONTEND_IMAGE),
+#          see ops/deploy.sh. NGINX_SITE=https once the certificate exists.
 # ============================================================
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: curalyta-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-curalyta}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-curalyta_dev_pw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib diisi di .env}
       POSTGRES_DB: ${POSTGRES_DB:-curalyta}
     volumes:
-      - curalyta_postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - postgres_data:/var/lib/postgresql/data
+    networks: [internal]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-curalyta} -d ${POSTGRES_DB:-curalyta}"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
       timeout: 5s
       retries: 10
+    logging: *default-logging
 
   backend:
+    image: ${BACKEND_IMAGE:-curalyta-backend:local}
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
-    container_name: curalyta-backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -42,18 +48,16 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-curalyta}:${POSTGRES_PASSWORD:-curalyta_dev_pw}@postgres:5432/${POSTGRES_DB:-curalyta}?schema=public
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-curalyta}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-curalyta}?schema=public
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN wajib diisi di .env}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi di .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@curalyta.app}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Curalyta#2025}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemma-3-27b-it}
-      GEMINI_VISION_MODEL: ${GEMINI_VISION_MODEL:-gemini-2.5-flash}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD wajib diisi di .env}
+      GROQ_API_KEYS: ${GROQ_API_KEYS:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      GROQ_VISION_MODEL: ${GROQ_VISION_MODEL:-qwen/qwen3.8-27b}
       PUBLIC_AI_IMAGE_MAX_MB: ${PUBLIC_AI_IMAGE_MAX_MB:-5}
       UPLOAD_DIR: /app/backend/uploads
       MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-10}
@@ -61,25 +65,53 @@ services:
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-200}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
     volumes:
-      - curalyta_uploads:/app/backend/uploads
-    ports:
-      - "${BACKEND_PORT:-4000}:4000"
-    # Backend entrypoint auto-applies migrations + auto-seeds default admin on every boot.
-    # No manual setup needed. Default admin: admin@curalyta.app / Curalyta#2025
+      - uploads:/app/backend/uploads
+    networks: [internal]
+    expose: ["4000"]
+    logging: *default-logging
 
   frontend:
+    image: ${FRONTEND_IMAGE:-curalyta-frontend:local}
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
-    container_name: curalyta-frontend
+    restart: unless-stopped
+    networks: [internal]
+    expose: ["8080"]
+    logging: *default-logging
+
+  nginx:
+    image: nginx:1.27-alpine
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    environment:
+      SERVER_NAME: ${SERVER_NAME:-_}
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/templates/${NGINX_SITE:-http}.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./docker/nginx/snippets:/etc/nginx/snippets:ro
+      - ${CERTBOT_WEBROOT:-./.certbot/www}:/var/www/certbot:ro
+      - ${LETSENCRYPT_DIR:-./.certbot/conf}:/etc/letsencrypt:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging: *default-logging
+
+networks:
+  internal:
+    name: curalyta_internal
 
 volumes:
-  curalyta_postgres_data:
+  postgres_data:
     name: curalyta_postgres_data
-  curalyta_uploads:
+  uploads:
     name: curalyta_uploads

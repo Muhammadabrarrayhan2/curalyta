@@ -43,10 +43,23 @@ backend/uploads/*
 # Prisma generated
 backend/node_modules/.prisma/
 
-# Docker
-.dockerignore
 
 # Temporary
 tmp/
 temp/
 *.tmp
+
+# Cloud credentials / keys (never commit)
+*.pem
+*-key.json
+*credentials*.json
+gcp-*.json
+id_ed25519*
+ops/.secrets/
+docs/bukti/*.secret
+
+# Local certbot dirs used by docker compose
+.certbot/
+
+# Evidence logs for the BNSP portfolio must be committed
+!docs/bukti/*.log

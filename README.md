@@ -173,8 +173,8 @@ Edit `backend/.env`, minimal ubah:
 DATABASE_URL="postgresql://curalyta:curalyta_dev_pw@localhost:5432/curalyta?schema=public"
 JWT_SECRET="ganti-jadi-secret-random-minimal-32-karakter-untuk-production"
 
-# Opsional — biarkan kosong jika tidak pakai AI
-ANTHROPIC_API_KEY=
+# Opsional — biarkan kosong jika tidak pakai AI (beberapa key dipisah koma)
+GROQ_API_KEYS=
 ```
 
 > 💡 **Generate JWT secret kuat:**
@@ -338,8 +338,9 @@ curalyta/
 | `BCRYPT_ROUNDS` | `12` | Password hashing cost |
 | `ADMIN_EMAIL` | `admin@curalyta.app` | Default admin email (used by seed) |
 | `ADMIN_PASSWORD` | `Curalyta#2025` | Default admin password |
-| `ANTHROPIC_API_KEY` | (empty) | Optional. If set, AI features activate |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-20250514` | Claude model name |
+| `GROQ_API_KEYS` | (empty) | Optional. One or more Groq keys, comma-separated; rotated per request with automatic failover on 429/401 |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Text model (Doctor AI + Tanya AI) |
+| `GROQ_VISION_MODEL` | `qwen/qwen3.8-27b` | Vision model for Tanya AI photo uploads |
 | `UPLOAD_DIR` | `./uploads` | Where documents are stored |
 | `MAX_FILE_SIZE_MB` | `10` | Max upload size |
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Rate-limit window (15 min) |
@@ -405,13 +406,15 @@ Semua endpoint berawalan `/api` dan menggunakan **JWT Bearer token** kecuali dis
 
 ## 🤖 Fitur AI (Opsional)
 
-Platform berjalan **sepenuhnya tanpa AI** jika `ANTHROPIC_API_KEY` kosong — endpoint AI akan mengembalikan 503 dengan pesan yang jelas, dan frontend akan menyembunyikan tombol AI.
+Platform berjalan **sepenuhnya tanpa AI** jika `GROQ_API_KEYS` kosong — endpoint AI akan mengembalikan 503 dengan pesan yang jelas, dan frontend akan menyembunyikan tombol AI.
+
+AI dokter (AI Summary dan AI Chat) dan Tanya AI publik memakai [Groq](https://console.groq.com). Isi satu atau beberapa key; backend merotasi key secara round-robin per request dan otomatis pindah ke key berikutnya bila satu key terkena rate limit (429), ditolak (401/403), atau gagal sementara (5xx/timeout). Jumlah key aktif tampil di dashboard admin.
 
 **Aktifkan:**
-1. Dapatkan API key di [console.anthropic.com](https://console.anthropic.com)
-2. Set di `backend/.env`:
+1. Buat API key di [console.groq.com/keys](https://console.groq.com/keys) (boleh lebih dari satu)
+2. Set di `backend/.env` (jangan di-commit):
    ```env
-   ANTHROPIC_API_KEY=sk-ant-api03-...
+   GROQ_API_KEYS=gsk_key_pertama,gsk_key_kedua
    ```
 3. Restart backend
 

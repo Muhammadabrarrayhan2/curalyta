@@ -9,6 +9,7 @@ import { logger } from './lib/logger';
 import { prisma } from './lib/prisma';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { globalLimiter } from './middleware/rateLimit';
+import { checkHealth } from './lib/health';
 import { apiRouter } from './routes';
 
 const app = express();
@@ -48,6 +49,13 @@ if (isDev) {
 } else {
   app.use(morgan('combined'));
 }
+
+// Health check (checks database; registered before the rate limiter so
+// uptime probes are never throttled)
+app.get(['/health', '/api/health'], async (_req, res) => {
+  const result = await checkHealth({ ping: () => prisma.$queryRaw`SELECT 1` });
+  res.status(result.httpStatus).set('Cache-Control', 'no-store').json(result.body);
+});
 
 // Global rate limit (applied to /api/*)
 app.use('/api', globalLimiter);
@@ -118,10 +126,10 @@ async function start() {
       logger.info(`  Environment: ${config.env}`);
       logger.info(`  CORS origin: ${config.corsOrigin}`);
       logger.info(
-        `  Doctor AI enabled: ${config.ai.enabled ? 'yes (' + config.ai.model + ')' : 'no (fallback mode)'}`
+        `  Doctor AI enabled: ${config.ai.enabled ? 'yes (Groq ' + config.ai.model + ', ' + config.ai.apiKeys.length + ' key)' : 'no (fallback mode)'}`
       );
       logger.info(
-        `  Public AI enabled: ${config.publicAi.enabled ? 'yes (' + config.publicAi.model + ')' : 'no (fallback mode)'}`
+        `  Public AI enabled: ${config.ai.enabled ? 'yes (' + config.ai.model + ', vision ' + config.ai.visionModel + ')' : 'no (fallback mode)'}`
       );
       logger.info('');
       logger.info('  Health:  GET http://localhost:' + config.port + '/api/health');

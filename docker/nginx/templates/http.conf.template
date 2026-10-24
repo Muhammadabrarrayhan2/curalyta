@@ -1,0 +1,16 @@
+# HTTP-only site: local development and VM bootstrap before the
+# Let's Encrypt certificate exists. ${SERVER_NAME} is substituted at start.
+
+include /etc/nginx/snippets/common.conf;
+
+server {
+    listen 80 default_server;
+    server_name ${SERVER_NAME};
+
+    # certbot --webroot writes challenge files here
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    include /etc/nginx/snippets/app-routes.conf;
+}

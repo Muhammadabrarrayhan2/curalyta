@@ -1,0 +1,104 @@
+# Tahap 2.8 — Verifikasi lokal docker compose (kondisi bersih)
+# Waktu  : 2026-10-24 10:12:18 +0700
+# Host   : Windows 11 + Docker Desktop 29.4.0
+# Commit : d2ec418 + perubahan Tahap 2 (belum di-commit)
+
+$ docker compose down -v && docker compose up -d --build --wait
+(semua container mencapai status healthy dalam ~57 detik)
+
+$ docker compose ps
+SERVICE    IMAGE                     STATUS                    PORTS
+backend    curalyta-backend:local    Up 42 seconds (healthy)   4000/tcp
+frontend   curalyta-frontend:local   Up 53 seconds (healthy)   8080/tcp
+nginx      nginx:1.27-alpine         Up 36 seconds (healthy)   0.0.0.0:8088->80/tcp, [::]:8088->80/tcp, 0.0.0.0:8443->443/tcp, [::]:8443->443/tcp
+postgres   postgres:16-alpine        Up 53 seconds (healthy)   5432/tcp
+
+$ docker images (ukuran image production)
+curalyta-frontend:local  74.6MB
+curalyta-backend:local  349MB
+
+$ user proses di container (non-root)
+backend: uid=1001(curalyta) gid=1001(curalyta) groups=1001(curalyta)
+frontend: uid=101(nginx) gid=101(nginx) groups=101(nginx)
+
+$ log migrasi Prisma saat backend start
+backend-1  | [curalyta] Starting backend...
+backend-1  | [curalyta] Node version: v20.20.2
+backend-1  | [curalyta] Environment:  production
+backend-1  | [curalyta] Applying database migrations (prisma migrate deploy)...
+backend-1  | 1 migration found in prisma/migrations
+backend-1  | Applying migration `20260422000000_init`
+backend-1  | The following migration(s) have been applied:
+backend-1  | migrations/
+backend-1  |     └─ migration.sql
+backend-1  | All migrations have been successfully applied.
+backend-1  | [curalyta] Starting API server on port 4000...
+backend-1  | [2026-10-24T03:11:39.727Z] INFO: ✓ Database connected
+
+$ curl -i http://localhost:8088/health
+HTTP/1.1 200 OK
+Server: nginx
+Content-Type: application/json; charset=utf-8
+Content-Length: 176
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: cross-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Vary: Origin, Accept-Encoding
+Access-Control-Allow-Credentials: true
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Cross-Origin-Opener-Policy: same-origin
+
+{"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-24T03:12:21.978Z","uptimeSeconds":43,"responseTimeMs":3,"database":{"status":"up","latencyMs":3}}
+
+
+$ curl http://localhost:8088/api/health
+{"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-24T03:12:22.076Z","uptimeSeconds":43,"responseTimeMs":2.5,"database":{"status":"up","latencyMs":2.4}}
+
+$ curl -I http://localhost:8088/  (frontend lewat reverse proxy, cek security header)
+HTTP/1.1 200 OK
+Server: nginx
+Content-Type: text/html
+Content-Length: 1007
+Cache-Control: no-cache
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Cross-Origin-Opener-Policy: same-origin
+
+$ POST /api/auth/login (admin, password dari .env — tidak ditampilkan)
+HTTP 200 dalam 0.409344s
+{"user":{"id":"cmvltoeuy0000rcq24f7jioz9","email":"admin@curalyta.app","name":"Administrator","role":"ADMIN","phone":null,"active":true,"createdAt":"2026-10-24T03:11:40.091Z"},"token":"<redacted>"}$ POST /api/auth/login dengan password salah
+HTTP 401
+
+$ port yang terbuka ke host (hanya nginx)
+curalyta-verify-nginx-1: 0.0.0.0:8088->80/tcp, [::]:8088->80/tcp, 0.0.0.0:8443->443/tcp, [::]:8443->443/tcp
+curalyta-verify-backend-1: 4000/tcp
+curalyta-verify-postgres-1: 5432/tcp
+curalyta-verify-frontend-1: 8080/tcp
+
+$ contoh access log nginx (format JSON dengan request_time)
+nginx-1  | {"time":"2026-10-24T03:12:22+00:00","remote_addr":"172.18.0.1","method":"HEAD","uri":"/","status":200,"bytes_sent":0,"request_time":0.001,"upstream_response_time":"0.002","upstream":"172.18.0.2:8080","host":"localhost","referer":"","user_agent":"curl/8.12.1"}
+nginx-1  | {"time":"2026-10-24T03:12:22+00:00","remote_addr":"172.18.0.1","method":"POST","uri":"/api/auth/login","status":200,"bytes_sent":423,"request_time":0.404,"upstream_response_time":"0.404","upstream":"172.18.0.4:4000","host":"localhost","referer":"","user_agent":"curl/8.12.1"}
+nginx-1  | {"time":"2026-10-24T03:12:23+00:00","remote_addr":"172.18.0.1","method":"POST","uri":"/api/auth/login","status":401,"bytes_sent":71,"request_time":0.335,"upstream_response_time":"0.336","upstream":"172.18.0.4:4000","host":"localhost","referer":"","user_agent":"curl/8.12.1"}
+
+# Perbaikan: header keamanan ganda (helmet + nginx) disatukan lewat proxy_hide_header
+$ curl -D - http://localhost:8088/api/health (header keamanan setelah perbaikan)
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Cross-Origin-Opener-Policy: same-origin
