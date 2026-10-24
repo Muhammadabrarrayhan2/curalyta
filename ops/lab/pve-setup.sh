@@ -131,8 +131,8 @@ make_vm() {
   [ "$(qm status "$id" | awk '{print $2}')" = "running" ] || qm start "$id"
 }
 step "4. VM ${APP_ID} curalyta-app dan VM ${MON_ID} curalyta-monitor"
-make_vm "$APP_ID" curalyta-app "$APP_IP" 2 3072 25G
-make_vm "$MON_ID" curalyta-monitor "$MON_IP" 2 2048 20G
+make_vm "$APP_ID" curalyta-app "$APP_IP" 2 2560 25G
+make_vm "$MON_ID" curalyta-monitor "$MON_IP" 2 1536 20G
 qm list
 
 # ---------- 5. Firewall per VM ----------
