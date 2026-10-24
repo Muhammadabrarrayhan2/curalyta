@@ -9,7 +9,8 @@
 #
 # Alur:
 #   1. git pull konfigurasi (compose, nginx, ops) dari branch main
-#   2. Autentikasi Docker ke Artifact Registry (service account VM)
+#   2. Login ke container registry (GHCR) bila REGISTRY_TOKEN tersedia;
+#      pada pipeline CI/CD login dilakukan oleh job deploy
 #   3. Set BACKEND_IMAGE/FRONTEND_IMAGE ke TAG di .env
 #   4. docker compose pull + up -d (hanya container yang berubah di-restart)
 #   5. Tunggu semua container healthy, lalu cek /health
@@ -23,8 +24,7 @@ SCRIPT_TAG="curalyta-deploy"
 load_env
 
 TAG="${1:-latest}"
-REGION="${GCP_REGION:-asia-southeast2}"
-REGISTRY="${REGISTRY:-${REGION}-docker.pkg.dev/${GCP_PROJECT:?GCP_PROJECT belum diisi di .env}/curalyta}"
+REGISTRY="${REGISTRY:?REGISTRY belum diisi di .env (contoh: ghcr.io/pemilik/curalyta)}"
 
 cd "$APP_DIR"
 log INFO "Deploy tag $TAG dimulai"
@@ -37,7 +37,9 @@ if [ -d .git ]; then
 fi
 
 # ---- 2. Login registry ----
-gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet >/dev/null 2>&1
+if [ -n "${REGISTRY_TOKEN:-}" ]; then
+  echo "$REGISTRY_TOKEN" | docker login "${REGISTRY%%/*}" -u "${REGISTRY_USER:-ci}" --password-stdin >/dev/null
+fi
 
 # ---- 3. Tetapkan tag image ----
 set_env() {

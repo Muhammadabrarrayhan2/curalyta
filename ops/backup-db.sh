@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # ============================================================
-# backup-db.sh — backup database PostgreSQL Curalyta ke Cloud Storage
+# backup-db.sh — backup database PostgreSQL Curalyta ke object storage
 #
 # Alur:
 #   1. pg_dump (format custom, terkompresi) dari container postgres
 #   2. Simpan lokal dengan timestamp + checksum SHA-256
-#   3. Upload ke gs://$BACKUP_BUCKET/postgres/ memakai service account VM
+#   3. Upload ke bucket S3-compatible (MinIO di VM monitoring) memakai
+#      klien "mc" yang dijalankan sebagai container sekali pakai
 #   4. Simpan hanya 7 file terbaru di disk lokal (bucket punya lifecycle 30 hari)
 #
 # Dijalankan harian oleh cron (/etc/cron.d/curalyta-backup) dan bisa manual:
@@ -44,9 +45,9 @@ mv "$file.partial" "$file"
 sha256sum "$file" | awk '{print $1}' > "$file.sha256"
 size=$(stat -c %s "$file")
 
-dest="gs://${BACKUP_BUCKET}/postgres/$(basename "$file")"
-if ! gcloud storage cp --quiet "$file" "$file.sha256" "gs://${BACKUP_BUCKET}/postgres/"; then
-  log ERROR "Upload ke $dest gagal (file lokal tetap disimpan)"
+dest="${BACKUP_BUCKET}/postgres/$(basename "$file")"
+if ! objstore cp --quiet "/backups/$(basename "$file")" "/backups/$(basename "$file").sha256" "backup/${BACKUP_BUCKET}/postgres/"; then
+  log ERROR "Upload ke object storage ($dest) gagal; file lokal tetap disimpan"
   exit 2
 fi
 
@@ -56,4 +57,4 @@ ls -1t "$BACKUP_DIR"/curalyta-*.dump 2>/dev/null | tail -n +"$((KEEP_LOCAL + 1))
 done
 
 elapsed=$(( $(date +%s) - started ))
-log INFO "Backup selesai: $dest ukuran=${size}B durasi=${elapsed}s"
+log INFO "Backup selesai: s3://$dest ukuran=${size}B durasi=${elapsed}s"

@@ -3,8 +3,8 @@
 #
 # Builds the Vite SPA, then serves static files with the unprivileged
 # nginx image (runs as non-root user "nginx", listens on 8080).
-# The same image is used behind the Nginx reverse proxy on the VM and
-# on Cloud Run (which injects PORT=8080).
+# The same image runs behind the Nginx reverse proxy on the lab VM and can
+# run standalone on a container PaaS (PORT is configurable).
 # ============================================================
 
 ARG NODE_IMAGE=node:20-alpine
@@ -25,7 +25,7 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.27-alpine AS runner
 
 # API_UPSTREAM: where /api is proxied. Empty = the reverse proxy in front
-# already routes /api (VM). On Cloud Run it is the production API origin.
+# already routes /api (VM). Standalone on a PaaS it is the production API origin.
 ENV API_UPSTREAM="" \
     PORT=8080
 

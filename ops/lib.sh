@@ -33,3 +33,17 @@ log() {
 compose() {
   docker compose --project-directory "$APP_DIR" -f "$APP_DIR/docker-compose.yml" "$@"
 }
+
+# Klien object storage S3-compatible (MinIO "mc") sebagai container sekali
+# pakai. Alias "backup" menunjuk ke BACKUP_S3_ENDPOINT; direktori backup
+# lokal di-mount ke /backups. Kredensial hanya lewat environment.
+objstore() {
+  : "${BACKUP_S3_ENDPOINT:?BACKUP_S3_ENDPOINT belum diisi}"
+  : "${BACKUP_S3_ACCESS_KEY:?BACKUP_S3_ACCESS_KEY belum diisi}"
+  : "${BACKUP_S3_SECRET_KEY:?BACKUP_S3_SECRET_KEY belum diisi}"
+  local scheme="${BACKUP_S3_ENDPOINT%%://*}" hostport="${BACKUP_S3_ENDPOINT#*://}"
+  docker run --rm --network host \
+    -e "MC_HOST_backup=${scheme}://${BACKUP_S3_ACCESS_KEY}:${BACKUP_S3_SECRET_KEY}@${hostport}" \
+    -v "${BACKUP_DIR:-/var/backups/curalyta}:/backups" \
+    "${MC_IMAGE:-minio/mc:RELEASE.2025-08-13T08-35-41Z}" "$@"
+}

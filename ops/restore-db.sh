@@ -5,7 +5,8 @@
 # Pemakaian:
 #   restore-db.sh [SUMBER] [--target DB] [--production]
 #
-#   SUMBER       latest (default) | gs://bucket/postgres/file.dump | /path/file.dump
+#   SUMBER       latest (default, backup terbaru di object storage)
+#                | s3://bucket/postgres/file.dump | /path/file.dump
 #   --target DB  database tujuan (default: curalyta_restore_test, database UJI)
 #   --production restore ke database produksi ($POSTGRES_DB). Backend dihentikan
 #                selama restore lalu dinyalakan lagi. Wajib konfirmasi "RESTORE".
@@ -49,15 +50,18 @@ t0=$(date +%s)
 case "$source_arg" in
   latest)
     : "${BACKUP_BUCKET:?BACKUP_BUCKET belum diisi}"
-    source_arg=$(gcloud storage ls "gs://${BACKUP_BUCKET}/postgres/*.dump" | sort | tail -n 1)
-    [ -n "$source_arg" ] || { log ERROR "Tidak ada backup di bucket"; exit 1; }
+    latest_name=$(objstore ls --json "backup/${BACKUP_BUCKET}/postgres/" \
+      | grep -o '"key":"curalyta-[^"]*\.dump"' | cut -d'"' -f4 | sort | tail -n 1)
+    [ -n "$latest_name" ] || { log ERROR "Tidak ada backup di bucket"; exit 1; }
+    source_arg="s3://${BACKUP_BUCKET}/postgres/${latest_name}"
     ;;
 esac
 
-if [[ "$source_arg" == gs://* ]]; then
-  local_file="$WORK_DIR/$(basename "$source_arg")"
+if [[ "$source_arg" == s3://* ]]; then
+  object="${source_arg#s3://}"
+  local_file="$WORK_DIR/$(basename "$object")"
   log INFO "Mengunduh $source_arg"
-  gcloud storage cp --quiet "$source_arg" "$source_arg.sha256" "$WORK_DIR/"
+  objstore cp --quiet "backup/${object}" "backup/${object}.sha256" "/backups/restore/"
 else
   local_file="$source_arg"
 fi
