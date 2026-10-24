@@ -1,0 +1,119 @@
+# ============================================================
+# CI/CD Curalyta
+#
+#   test        : typecheck + unit test backend & frontend, build frontend
+#   build       : build image backend & frontend, push ke GHCR (tag commit + latest)
+#   deploy-lab  : deploy ke VM curalyta-app lewat runner self-hosted di dalam lab
+#                 (tidak perlu membuka port masuk dari internet ke lab)
+#
+# Staging frontend (PaaS) di-deploy otomatis oleh integrasi Git Vercel.
+# ============================================================
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag image untuk deploy/rollback (kosong = commit ini)"
+        required: false
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io/muhammadabrarrayhan2/curalyta
+
+jobs:
+  test:
+    name: Test & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Backend — prisma generate, typecheck, test
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx tsc --noEmit -p tsconfig.json
+          npm test
+      - name: Frontend — typecheck, test, build
+        working-directory: frontend
+        run: |
+          npx tsc --noEmit -p tsconfig.json
+          npm test
+          npm run build
+
+  build:
+    name: Build & push images
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/backend:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+      - name: Frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/frontend:${{ steps.meta.outputs.tag }}
+            ${{ env.REGISTRY }}/frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  deploy-lab:
+    name: Deploy ke lab (VM curalyta-app)
+    needs: build
+    runs-on: [self-hosted, curalyta-lab]
+    environment:
+      name: production-lab
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Deploy
+        run: /opt/curalyta/ops/deploy.sh "${{ inputs.tag || needs.build.outputs.tag }}"
+      - name: Ringkasan
+        if: always()
+        run: |
+          {
+            echo "### Deploy lab"
+            echo "- Tag image: \`${{ inputs.tag || needs.build.outputs.tag }}\`"
+            echo "- Waktu: $(date -Iseconds)"
+            echo '```'
+            docker compose --project-directory /opt/curalyta ps --format 'table {{.Service}}\t{{.Image}}\t{{.Status}}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,85 @@
+# Aturan alert — ambang batas mengacu pada docs/SLA.md
+groups:
+  - name: ketersediaan
+    rules:
+      - alert: LayananTidakTersedia
+        expr: probe_success{job="blackbox-health"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          priority: P1
+        annotations:
+          summary: "Endpoint {{ $labels.instance }} gagal health check"
+          description: "Uptime check /health gagal selama lebih dari 1 menit (jalur {{ $labels.path }})."
+
+      - alert: WaktuResponsLambat
+        expr: probe_duration_seconds{job="blackbox-health"} > 1
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+        annotations:
+          summary: "Waktu respons /health di atas 1 detik"
+          description: "{{ $labels.instance }} merespons {{ $value | humanizeDuration }} (target SLA < 1 detik)."
+
+      - alert: HalamanWebGagal
+        expr: probe_success{job="blackbox-web"} == 0
+        for: 3m
+        labels:
+          severity: warning
+          priority: P2
+        annotations:
+          summary: "Halaman web {{ $labels.instance }} tidak dapat diakses"
+
+      - alert: TargetMonitoringHilang
+        expr: up{job=~"node|cadvisor"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          priority: P2
+        annotations:
+          summary: "Exporter {{ $labels.job }} di {{ $labels.instance }} tidak merespons"
+
+  - name: sumber-daya
+    rules:
+      - alert: CPUTinggi
+        expr: 100 * (1 - avg by (host) (rate(node_cpu_seconds_total{mode="idle"}[2m]))) > 80
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+        annotations:
+          summary: "CPU {{ $labels.host }} di atas 80% selama 5 menit"
+          description: "Pemakaian CPU saat ini {{ $value | printf \"%.1f\" }}%."
+
+      - alert: MemoriTinggi
+        expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 85
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+        annotations:
+          summary: "Memori {{ $labels.host }} di atas 85%"
+          description: "Pemakaian memori {{ $value | printf \"%.1f\" }}%."
+
+      - alert: DiskHampirPenuh
+        expr: 100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}) > 80
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} di {{ $labels.host }} di atas 80%"
+          description: "Terpakai {{ $value | printf \"%.1f\" }}%."
+
+  - name: backup
+    rules:
+      # Ditulis oleh ops/backup-db.sh lewat textfile collector node_exporter
+      - alert: BackupDatabaseTerlambat
+        expr: time() - curalyta_backup_last_success_timestamp_seconds > 26 * 3600
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+        annotations:
+          summary: "Backup database terakhir lebih dari 26 jam lalu (RPO 24 jam terancam)"

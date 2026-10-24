@@ -63,3 +63,7 @@ docs/bukti/*.secret
 
 # Evidence logs for the BNSP portfolio must be committed
 !docs/bukti/*.log
+
+# Rendered lab configs containing secrets (generated on the VMs)
+ops/lab/monitor/.env
+ops/lab/monitor/alertmanager/alertmanager.yml

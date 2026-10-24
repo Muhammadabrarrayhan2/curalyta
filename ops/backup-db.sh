@@ -58,3 +58,21 @@ done
 
 elapsed=$(( $(date +%s) - started ))
 log INFO "Backup selesai: s3://$dest ukuran=${size}B durasi=${elapsed}s"
+
+# Metrik untuk Prometheus (textfile collector node_exporter) — dipakai
+# alert BackupDatabaseTerlambat untuk menjaga RPO 24 jam
+TEXTFILE_DIR="${TEXTFILE_DIR:-/var/lib/prometheus/node-exporter}"
+if [ -d "$TEXTFILE_DIR" ]; then
+  cat > "$TEXTFILE_DIR/curalyta_backup.prom.$$" <<EOF
+# HELP curalyta_backup_last_success_timestamp_seconds Waktu backup database terakhir yang berhasil.
+# TYPE curalyta_backup_last_success_timestamp_seconds gauge
+curalyta_backup_last_success_timestamp_seconds $(date +%s)
+# HELP curalyta_backup_last_size_bytes Ukuran file backup terakhir.
+# TYPE curalyta_backup_last_size_bytes gauge
+curalyta_backup_last_size_bytes $size
+# HELP curalyta_backup_last_duration_seconds Durasi backup terakhir.
+# TYPE curalyta_backup_last_duration_seconds gauge
+curalyta_backup_last_duration_seconds $elapsed
+EOF
+  mv "$TEXTFILE_DIR/curalyta_backup.prom.$$" "$TEXTFILE_DIR/curalyta_backup.prom"
+fi

@@ -1,0 +1,20 @@
+# Agen monitoring di VM aplikasi (terpisah dari stack aplikasi):
+#   cAdvisor — metrik CPU/memori/jaringan per container (setara docker stats)
+#   untuk di-scrape oleh Prometheus di VM monitoring (:8080, dibatasi firewall)
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    restart: unless-stopped
+    privileged: true
+    devices: [/dev/kmsg]
+    command: [--docker_only=true, --housekeeping_interval=15s]
+    ports: ["8080:8080"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
