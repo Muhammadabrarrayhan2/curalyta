@@ -1,6 +1,6 @@
 # Teknologi Cloud Computing pada Curalyta
 
-**Unit kompetensi:** J.631120.002.01 — Mengidentifikasi teknologi cloud computing
+Unit kompetensi: J.631120.002.01, Mengidentifikasi teknologi cloud computing
 
 Dokumen ini mengidentifikasi teknologi yang dipakai, alasan pemilihannya, dan alternatifnya. Konfigurasi yang disebut ada di repositori; hasil eksekusinya ada di `docs/bukti/`.
 
@@ -29,27 +29,27 @@ Dokumen ini mengidentifikasi teknologi yang dipakai, alasan pemilihannya, dan al
 
 ## 2. Virtualisasi
 
-**Konsep.** Hypervisor membagi satu mesin fisik menjadi beberapa mesin virtual yang masing-masing menjalankan sistem operasi sendiri. KVM adalah hypervisor tipe 1 di kernel Linux; VMware Workstation adalah hypervisor tipe 2 yang berjalan di atas Windows.
+Konsep. Hypervisor membagi satu mesin fisik menjadi beberapa mesin virtual yang masing-masing menjalankan sistem operasi sendiri. KVM adalah hypervisor tipe 1 di kernel Linux; VMware Workstation adalah hypervisor tipe 2 yang berjalan di atas Windows.
 
-**Penerapan.** Lab memakai virtualisasi bersarang (nested):
+Penerapan. Lab memakai virtualisasi bersarang (nested):
 
 ```
 Laptop (Windows 11, i7-12700H, 16 GB)
-└── VMware Workstation  — hypervisor tipe 2, VT-x diteruskan ke tamu
-    └── Proxmox VE 9.2  — hypervisor tipe 1 (KVM), /dev/kvm tersedia
+└── VMware Workstation  - hypervisor tipe 2, VT-x diteruskan ke tamu
+    └── Proxmox VE 9.2  - hypervisor tipe 1 (KVM), /dev/kvm tersedia
         ├── VM 101 curalyta-app      (Ubuntu 22.04, 2 vCPU, 2,5 GB, 25 GB)
         └── VM 102 curalyta-monitor  (Ubuntu 22.04, 2 vCPU, 1,5 GB, 20 GB)
 ```
 
 Syarat yang diverifikasi: Hyper-V Windows dimatikan agar VMware memakai VT-x langsung (log VMware: `Monitor Mode: CPL0`), dan `/dev/kvm` tersedia di Proxmox (`docs/bukti/tahap3-provision-proxmox.log`).
 
-**Alasan:** Proxmox gratis, open source, dan menyediakan fitur IaaS lengkap (template, cloud-init, firewall, snapshot, vzdump) lewat CLI dan web UI, sesuai materi pelatihan (Windows → VMware → Proxmox).
+Alasan: Proxmox gratis, open source, dan menyediakan fitur IaaS lengkap (template, cloud-init, firewall, snapshot, vzdump) lewat CLI dan web UI, sesuai materi pelatihan (Windows → VMware → Proxmox).
 
 ## 3. Container dan registry
 
-**Konsep.** Container mengemas aplikasi beserta dependensinya menjadi image yang tidak berubah. Berbeda dari VM, container berbagi kernel host sehingga lebih ringan dan cepat dijalankan.
+Konsep. Container mengemas aplikasi beserta dependensinya menjadi image yang tidak berubah. Berbeda dari VM, container berbagi kernel host sehingga lebih ringan dan cepat dijalankan.
 
-**Penerapan.**
+Penerapan.
 - Image production dibangun multi-stage, berjalan sebagai user non-root (`curalyta` uid 1001 untuk backend, `nginx` uid 101 untuk frontend), dan memiliki `HEALTHCHECK`.
 - Ukuran image hasil build: frontend 74,6 MB, backend 349 MB (`docs/bukti/tahap2-verifikasi-lokal.log`).
 - Setiap push ke `main` membangun image bertag commit (mis. `backend:4c22f21`) dan `latest`, lalu menyimpannya di GHCR. Tag commit memungkinkan rollback ke versi mana pun.
@@ -57,10 +57,10 @@ Syarat yang diverifikasi: Hyper-V Windows dimatikan agar VMware memakai VT-x lan
 ## 4. Reverse proxy
 
 Nginx adalah satu-satunya container yang membuka port (80/443). Fungsinya:
-- **Routing:** `/` → `frontend:8080`, `/api/*` dan `/health` → `backend:4000`.
-- **Keamanan:** header `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (mode HTTPS); header duplikat dari backend disembunyikan.
-- **Observabilitas:** log akses JSON berisi `request_time` dan `upstream_response_time`.
-- **Penemuan layanan:** resolver DNS Docker (`127.0.0.11`) agar alamat container diperbarui setelah restart.
+- Routing: `/` → `frontend:8080`, `/api/*` dan `/health` → `backend:4000`.
+- Keamanan: header `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS (mode HTTPS); header duplikat dari backend disembunyikan.
+- Observabilitas: log akses JSON berisi `request_time` dan `upstream_response_time`.
+- Penemuan layanan: resolver DNS Docker (`127.0.0.11`) agar alamat container diperbarui setelah restart.
 
 ## 5. Penyimpanan
 
@@ -74,12 +74,12 @@ Nginx adalah satu-satunya container yang membuka port (80/443). Fungsinya:
 
 ## 6. Jaringan dan firewall (setara VPC)
 
-- **Subnet privat:** 192.168.45.0/24 (VMware NAT). Gateway dan DNS 192.168.45.2. Lalu lintas keluar ke internet melalui NAT.
-- **Firewall per VM (default deny):**
+- Subnet privat: 192.168.45.0/24 (VMware NAT). Gateway dan DNS 192.168.45.2. Lalu lintas keluar ke internet melalui NAT.
+- Firewall per VM (default deny):
   - `curalyta-app`: masuk hanya 80/443 (publik), 22 dari laptop admin dan host Proxmox, 9100/8080 (metrik) hanya dari VM monitoring.
   - `curalyta-monitor`: Grafana 3000, Prometheus 9090, dan Alertmanager 9093 hanya dari laptop admin; API S3 Garage 3900 hanya dari VM aplikasi dan laptop admin.
-- **Jaringan container:** jaringan Docker `curalyta_internal`; PostgreSQL dan backend tidak terekspos ke luar VM.
-- **Akses publik:** Cloudflare Tunnel membuat koneksi keluar dari VM ke edge Cloudflare, sehingga layanan dapat diakses publik lewat HTTPS tanpa port forwarding atau IP publik.
+- Jaringan container: jaringan Docker `curalyta_internal`; PostgreSQL dan backend tidak terekspos ke luar VM.
+- Akses publik: Cloudflare Tunnel membuat koneksi keluar dari VM ke edge Cloudflare, sehingga layanan dapat diakses publik lewat HTTPS tanpa port forwarding atau IP publik.
 
 ## 7. Identitas dan akses (IAM)
 
@@ -164,10 +164,10 @@ Contoh endpoint: `GET /health` (status + latensi database), `POST /api/auth/logi
 | Skalabilitas | Manual (scale up/out) | Otomatis | Otomatis (HPA) |
 | Biaya untuk skala kecil | Gratis di lab; murah di VPS | Gratis tier untuk frontend; backend terbatas | Butuh beberapa node; berlebihan untuk 1 aplikasi |
 | Database stateful | Mudah (volume lokal + backup) | Butuh DBaaS terpisah | Butuh StatefulSet/operator |
-| Kesesuaian untuk Curalyta | **Paling sesuai**: 1 aplikasi, data sensitif, perlu kontrol penuh | Dipakai untuk staging frontend | Dipertimbangkan bila layanan > 5 dan tim bertambah |
+| Kesesuaian untuk Curalyta | Paling sesuai: 1 aplikasi, data sensitif, perlu kontrol penuh | Dipakai untuk staging frontend | Dipertimbangkan bila layanan > 5 dan tim bertambah |
 
 | Kriteria | Proxmox (dipakai) | VMware ESXi | Public cloud IaaS (GCP/AWS) |
 |---|---|---|---|
 | Lisensi | Gratis, open source | Berbayar | Bayar per pemakaian, butuh kartu kredit |
 | Fitur | KVM, LXC, firewall, backup, cluster | Lengkap, enterprise | Lengkap + layanan terkelola |
-| Alasan | Gratis dan sesuai materi pelatihan | — | Tidak dipakai: aktivasi billing gagal |
+| Alasan | Gratis dan sesuai materi pelatihan | - | Tidak dipakai: aktivasi billing gagal |

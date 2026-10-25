@@ -1,10 +1,10 @@
 # Deployment Curalyta: Langkah yang Dijalankan
 
-Dokumen ini mencatat urutan deployment yang **benar-benar dijalankan** pada 23–25 Oktober 2026, termasuk kendala yang muncul dan keputusan yang diambil. Bukti eksekusi ada di `docs/bukti/`, dan riwayat perubahan di git.
+Dokumen ini mencatat urutan deployment yang benar-benar dijalankan pada 23–25 Oktober 2026, termasuk kendala yang muncul dan keputusan yang diambil. Bukti eksekusi ada di `docs/bukti/`, dan riwayat perubahan di git.
 
 ## 0. Keputusan platform
 
-Rencana awal memakai Google Cloud Platform (Compute Engine, Cloud Run, Artifact Registry, Cloud Monitoring). Billing GCP tidak dapat diaktifkan karena verifikasi kartu ditolak (`OR_MIVEM_02`). Diputuskan memakai jalur **gratis** yang sesuai materi pelatihan:
+Rencana awal memakai Google Cloud Platform (Compute Engine, Cloud Run, Artifact Registry, Cloud Monitoring). Billing GCP tidak dapat diaktifkan karena verifikasi kartu ditolak (`OR_MIVEM_02`). Diputuskan memakai jalur gratis yang sesuai materi pelatihan:
 
 | Kebutuhan | Rencana GCP | Implementasi gratis yang dipakai | Alasan |
 |---|---|---|---|
@@ -37,14 +37,14 @@ vmware-vdiskmanager -c -s 80GB -a nvme -t 0 curalyta-pve.vmdk
 #     Windows Security → Core isolation → Memory integrity Off; bcdedit /set hypervisorlaunchtype off; restart
 ```
 
-**Alasan:** selama Hyper-V/VBS aktif, VMware tidak dapat meneruskan VT-x, sehingga Proxmox tidak memiliki `/dev/kvm`.
+Alasan: selama Hyper-V/VBS aktif, VMware tidak dapat meneruskan VT-x, sehingga Proxmox tidak memiliki `/dev/kvm`.
 
 Kendala yang ditangani:
 - Kartu jaringan vmxnet3 butuh PCIe root port (`pciBridge4..7`).
 - File `.vmem` 6 GB memenuhi drive C:, diatasi dengan `mainMem.useNamedFile = "FALSE"`.
 - RAM VM diturunkan menjadi 4,5 GB karena commit memori Windows hampir habis.
 
-## 3. Proxmox VE (Tahap 3 — IaaS)
+## 3. Proxmox VE (Tahap 3: IaaS)
 
 | No | Langkah | Perintah | Fungsi dan alasan |
 |---|---|---|---|
@@ -82,9 +82,9 @@ gh api -X POST repos/Muhammadabrarrayhan2/curalyta/actions/runners/registration-
 ```
 Fungsi: Docker + rotasi log; `.env` produksi (password DB, JWT secret, password admin acak; key Groq dan key backup dari luar); cAdvisor; cron backup 02:00; logrotate; unattended-upgrades; Cloudflare Tunnel + watchdog; runner label `curalyta-lab`.
 
-## 6. CI/CD dan deploy pertama (Tahap 5 — SaaS)
+## 6. CI/CD dan deploy pertama (Tahap 5: SaaS)
 
-Push ke `main` menjalankan `.github/workflows/ci-cd.yml`: **test** → **build** (push GHCR `:<commit>`, `:latest`) → **deploy-lab** (runner di VM 101 menjalankan `ops/deploy.sh <commit>`).
+Push ke `main` menjalankan `.github/workflows/ci-cd.yml`: test → build (push GHCR `:<commit>`, `:latest`) → deploy-lab (runner di VM 101 menjalankan `ops/deploy.sh <commit>`).
 
 Kendala yang ditemukan oleh run nyata dan sudah diperbaiki:
 
@@ -96,7 +96,7 @@ Kendala yang ditemukan oleh run nyata dan sudah diperbaiki:
 
 Hasil: run `2d065e1`, `fd94864`, dan seterusnya sukses; container berjalan dengan image bertag commit yang di-deploy.
 
-## 7. Akses publik dan staging (Tahap 4 — PaaS)
+## 7. Akses publik dan staging (Tahap 4: PaaS)
 
 ```bash
 ops/lab/update-public-url.sh   # dari laptop, di root repo
@@ -111,6 +111,7 @@ Hasil: produksi `https://<tunnel>.trycloudflare.com/health` HTTP 200; staging `h
 |---|---|---|
 | Semua target monitoring | 11/11 up | `PEMANTAUAN.md` |
 | Backup + restore DB ke DB uji | 37 s / 2 s, data identik | `tahap7-backup-restore.log` |
+| vzdump VM 102 + restore penuh ke VM ID baru 9102 | Pulih 327 s, isi terverifikasi | `tahap7-vzdump-restore-vm.log` |
 | vzdump VM 101 + uji integritas | 2,08 GB, 63 s, lolos | `tahap7-vzdump-snapshot.log` |
 | Snapshot + rollback VM 102 | Pulih 36 s | `tahap7-vzdump-snapshot.log` |
 | Patching OS | 0 paket tertunda, healthcheck OK | `tahap4-patching-os.log` |

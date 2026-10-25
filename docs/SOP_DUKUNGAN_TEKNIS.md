@@ -1,28 +1,28 @@
 # SOP Dukungan Teknis Curalyta
 
-**Unit kompetensi:** J.631120.015.01 — Memberikan dukungan teknis atas masalah user dan report next layer
-**Berlaku untuk:** layanan produksi lab (`curalyta-app`, 192.168.45.20 dan URL HTTPS publik) serta staging Vercel
+Unit kompetensi: J.631120.015.01, Memberikan dukungan teknis atas masalah user dan report next layer
+Berlaku untuk: layanan produksi lab (`curalyta-app`, 192.168.45.20 dan URL HTTPS publik) serta staging Vercel
 
 ## 1. Peran dan kanal
 
 | Level | Peran | Kewenangan | Contoh tindakan |
 |---|---|---|---|
-| **L1** — Helpdesk | Menerima laporan pengguna, first level support | Membaca dashboard dan log, menjalankan `ops/healthcheck.sh`, restart container, membantu pengguna (reset sesi, panduan) | `docker compose restart backend`, memeriksa status di Grafana |
-| **L2** — Operator infrastruktur | Admin VM dan Proxmox | Restore backup, rollback deploy, menambah kapasitas VM, memperbarui sertifikat/tunnel, mengubah firewall | `ops/deploy.sh <tag-lama>`, `ops/restore-db.sh`, `qm set 101 --memory ...` |
-| **L3** — Pengembang / vendor | Tim aplikasi, penyedia eksternal (Groq, Vercel, GitHub, Cloudflare) | Perbaikan kode, perubahan skema database, eskalasi ke vendor | Patch kode + rilis lewat CI/CD, tiket ke status page vendor |
+| L1, Helpdesk | Menerima laporan pengguna, first level support | Membaca dashboard dan log, menjalankan `ops/healthcheck.sh`, restart container, membantu pengguna (reset sesi, panduan) | `docker compose restart backend`, memeriksa status di Grafana |
+| L2, Operator infrastruktur | Admin VM dan Proxmox | Restore backup, rollback deploy, menambah kapasitas VM, memperbarui sertifikat/tunnel, mengubah firewall | `ops/deploy.sh <tag-lama>`, `ops/restore-db.sh`, `qm set 101 --memory ...` |
+| L3, Pengembang / vendor | Tim aplikasi, penyedia eksternal (Groq, Vercel, GitHub, Cloudflare) | Perbaikan kode, perubahan skema database, eskalasi ke vendor | Patch kode + rilis lewat CI/CD, tiket ke status page vendor |
 
 Kanal laporan pengguna: email helpdesk atau formulir tiket (template di bagian 7). Alert otomatis masuk lewat ntfy.sh (push + email ke `abrarrayhan8@gmail.com`).
 
 ## 2. Klasifikasi prioritas
 
-Prioritas ditentukan dari **dampak** (berapa banyak pengguna/fungsi terdampak) dan **urgensi** (seberapa cepat dampaknya membesar).
+Prioritas ditentukan dari dampak (berapa banyak pengguna/fungsi terdampak) dan urgensi (seberapa cepat dampaknya membesar).
 
 | Prioritas | Kriteria | Contoh di Curalyta | Respons awal | Target penyelesaian |
 |---|---|---|---|---|
-| **P1 — Critical** | Layanan utama berhenti untuk semua pengguna | `/health` gagal, situs tidak bisa dibuka, database down | 15 menit | 1 jam (sesuai RTO) |
-| **P2 — High** | Fungsi utama terganggu, ada jalan pintas terbatas | Login gagal untuk sebagian pengguna, respons > 1 detik terus-menerus, AI dokter tidak merespons | 30 menit | 4 jam |
-| **P3 — Medium** | Dampak terbatas pada sebagian kecil fungsi | Unggah dokumen gagal untuk format tertentu, berita kesehatan tidak muncul | 4 jam | 2 hari kerja |
-| **P4 — Low** | Gangguan kecil atau permintaan informasi | Salah ketik di tampilan, pertanyaan cara pakai | 1 hari kerja | Sesuai jadwal rilis |
+| P1 (Critical) | Layanan utama berhenti untuk semua pengguna | `/health` gagal, situs tidak bisa dibuka, database down | 15 menit | 1 jam (sesuai RTO) |
+| P2 (High) | Fungsi utama terganggu, ada jalan pintas terbatas | Login gagal untuk sebagian pengguna, respons > 1 detik terus-menerus, AI dokter tidak merespons | 30 menit | 4 jam |
+| P3 (Medium) | Dampak terbatas pada sebagian kecil fungsi | Unggah dokumen gagal untuk format tertentu, berita kesehatan tidak muncul | 4 jam | 2 hari kerja |
+| P4 (Low) | Gangguan kecil atau permintaan informasi | Salah ketik di tampilan, pertanyaan cara pakai | 1 hari kerja | Sesuai jadwal rilis |
 
 Alert Prometheus sudah membawa label prioritas: `LayananTidakTersedia` = P1, `WaktuResponsLambat`/`CPUTinggi`/`MemoriTinggi`/`DiskHampirPenuh`/`BackupDatabaseTerlambat` = P2.
 
@@ -48,9 +48,9 @@ flowchart TD
 
 Langkah rinci:
 
-1. **Penerimaan.** Catat pelapor, waktu, layanan, gejala, langkah reproduksi, dan screenshot. Beri ID tiket.
-2. **Klasifikasi.** Tentukan prioritas memakai tabel bagian 2. Konfirmasi ke pelapor bahwa tiket diterima beserta target respons.
-3. **Diagnosis.** Kumpulkan fakta sebelum mengubah apa pun:
+1. Penerimaan. Catat pelapor, waktu, layanan, gejala, langkah reproduksi, dan screenshot. Beri ID tiket.
+2. Klasifikasi. Tentukan prioritas memakai tabel bagian 2. Konfirmasi ke pelapor bahwa tiket diterima beserta target respons.
+3. Diagnosis. Kumpulkan fakta sebelum mengubah apa pun:
    ```bash
    ssh -i ~/.ssh/curalyta_lab curalyta@192.168.45.20
    /opt/curalyta/ops/healthcheck.sh               # endpoint, container, disk
@@ -58,10 +58,10 @@ Langkah rinci:
    docker compose logs --since 30m backend | tail -100
    docker compose logs --since 30m nginx | tail -50   # status & request_time
    ```
-   Lalu buka dashboard Grafana **Curalyta — SLA & Infrastruktur** (http://192.168.45.30:3000).
-4. **Penyelesaian.** Terapkan perbaikan sesuai panduan di bagian 4. Setiap perubahan produksi dicatat di tiket (apa, kapan, siapa).
-5. **Verifikasi.** Jalankan ulang `healthcheck.sh`, cek dashboard hijau, minta pelapor mencoba lagi.
-6. **Penutupan.** Isi akar masalah, tindakan, dan durasi. Untuk P1/P2 buat laporan insiden (template bagian 8).
+   Lalu buka dashboard Grafana Curalyta, SLA & Infrastruktur (http://192.168.45.30:3000).
+4. Penyelesaian. Terapkan perbaikan sesuai panduan di bagian 4. Setiap perubahan produksi dicatat di tiket (apa, kapan, siapa).
+5. Verifikasi. Jalankan ulang `healthcheck.sh`, cek dashboard hijau, minta pelapor mencoba lagi.
+6. Penutupan. Isi akar masalah, tindakan, dan durasi. Untuk P1/P2 buat laporan insiden (template bagian 8).
 
 ## 4. Panduan troubleshooting masalah umum
 
@@ -86,7 +86,7 @@ Langkah rinci:
 
 ### 4.3 Aplikasi lambat
 
-1. Lihat panel **Latensi uptime check** dan **CPU/Memori** di Grafana.
+1. Lihat panel Latensi uptime check dan CPU/Memori di Grafana.
 2. `docker stats --no-stream` di VM aplikasi untuk menemukan container yang boros.
 3. Log Nginx berformat JSON: cari permintaan dengan `request_time` besar:
    `docker compose logs --since 30m nginx | grep -o '"uri":"[^"]*","status":[0-9]*,"bytes_sent":[0-9]*,"request_time":[0-9.]*' | sort -t: -k5 -nr | head`
@@ -161,7 +161,7 @@ Isi minimal saat eskalasi: ID tiket, prioritas, gejala, waktu mulai, langkah dia
 ## 8. Template laporan insiden
 
 ```markdown
-# Laporan Insiden INC-NNN — <judul singkat>
+# Laporan Insiden INC-NNN - <judul singkat>
 
 | Atribut | Nilai |
 |---|---|

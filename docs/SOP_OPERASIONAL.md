@@ -12,14 +12,14 @@ Prosedur standar untuk mengoperasikan lab produksi Curalyta. Semua perintah suda
 
 ## 1. Menyalakan dan mematikan layanan
 
-**Menyalakan seluruh lab (dari keadaan mati):**
+Menyalakan seluruh lab (dari keadaan mati):
 1. Buka VMware Workstation, lalu nyalakan VM `curalyta-pve`. Bisa juga lewat CLI:
    `vmrun -T ws start "C:\Users\ACER\Documents\Virtual Machines\curalyta-pve\curalyta-pve.vmx" nogui`
 2. VM 101 dan 102 menyala otomatis (`onboot=1`). Container memakai `restart: unless-stopped`, dan tunnel serta runner adalah service systemd yang aktif saat boot.
 3. Periksa: `/opt/curalyta/ops/healthcheck.sh` di VM 101 dan dashboard Grafana.
 4. Jika service tunnel mendapat URL baru, jalankan `ops/lab/update-public-url.sh` dari laptop (lihat bagian 9).
 
-**Mematikan dengan aman:**
+Mematikan dengan aman:
 ```bash
 ssh root@192.168.45.10 'qm shutdown 101 --timeout 120; qm shutdown 102 --timeout 120; shutdown -h now'
 ```
@@ -34,7 +34,7 @@ Manual dari VM 101 (butuh token GHCR berizin `read:packages`):
 cd /opt/curalyta
 REGISTRY_TOKEN=<token> REGISTRY_USER=<user-github> ops/deploy.sh <tag-commit>
 ```
-Dari GitHub: Actions → CI/CD → **Run workflow**, isi `tag` bila ingin tag tertentu.
+Dari GitHub: Actions → CI/CD → Run workflow, isi `tag` bila ingin tag tertentu.
 
 ## 3. Rollback
 
@@ -70,7 +70,7 @@ Hasil: `/var/backups/curalyta/curalyta-<UTC>.dump` beserta `.sha256`, disalin ke
 
 ## 6. Restore database
 
-1. **Selalu uji dulu** ke database terpisah:
+1. Selalu uji dulu ke database terpisah:
    ```bash
    sudo /opt/curalyta/ops/restore-db.sh latest            # → database curalyta_restore_test
    ```
@@ -94,7 +94,7 @@ qm delsnapshot 101 sebelum-patch-YYYYMMDD  # hapus setelah perubahan terverifika
 vzdump 101 --storage backup-disk --mode snapshot --compress zstd
 pvesm list backup-disk
 
-# restore ke VM ID baru (uji) — putuskan jaringan agar tidak bentrok IP
+# restore ke VM ID baru (uji) - putuskan jaringan agar tidak bentrok IP
 qmrestore /mnt/backup-disk/dump/vzdump-qemu-101-<waktu>.vma.zst 9101 --storage local-lvm --unique 1
 qm set 9101 --net0 virtio=<mac>,bridge=vmbr0,firewall=1,link_down=1
 # restore menimpa VM asli (darurat): matikan VM 101 lalu
@@ -115,13 +115,13 @@ Lakukan juga bila ada dugaan secret bocor. Untuk secret lain: password database 
 
 ## 9. Perpanjangan sertifikat dan URL publik
 
-- **Jalur publik (Cloudflare Tunnel):** TLS diterminasi dan diperpanjang otomatis oleh Cloudflare. Tidak ada sertifikat di VM.
-- **URL quick tunnel berubah** setiap service `curalyta-tunnel` restart. Dari laptop di root repo jalankan:
+- Jalur publik (Cloudflare Tunnel): TLS diterminasi dan diperpanjang otomatis oleh Cloudflare. Tidak ada sertifikat di VM.
+- URL quick tunnel berubah setiap service `curalyta-tunnel` restart. Dari laptop di root repo jalankan:
   ```bash
   ops/lab/update-public-url.sh
   ```
   Skrip memperbarui `CORS_ORIGIN`, target uptime check Prometheus, dan rewrite staging Vercel (`frontend/vercel.json`, lalu commit dan push).
-- **Jika memakai domain sendiri + Let's Encrypt:** isi `SERVER_NAME`, terbitkan sertifikat dengan `certbot certonly --webroot -w /var/www/certbot -d <domain>`, set `NGINX_SITE=https`, lalu `docker compose up -d nginx`. Perpanjangan otomatis oleh timer `certbot.timer`; tambahkan deploy hook `docker compose -f /opt/curalyta/docker-compose.yml exec nginx nginx -s reload`.
+- Jika memakai domain sendiri + Let's Encrypt: isi `SERVER_NAME`, terbitkan sertifikat dengan `certbot certonly --webroot -w /var/www/certbot -d <domain>`, set `NGINX_SITE=https`, lalu `docker compose up -d nginx`. Perpanjangan otomatis oleh timer `certbot.timer`; tambahkan deploy hook `docker compose -f /opt/curalyta/docker-compose.yml exec nginx nginx -s reload`.
 
 ## 10. Patching OS
 

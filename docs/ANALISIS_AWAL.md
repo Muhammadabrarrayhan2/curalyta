@@ -5,15 +5,15 @@
 | Repositori | https://github.com/Muhammadabrarrayhan2/curalyta |
 | Commit yang dianalisis | `d2ec418` (Update README.md) |
 | Tanggal analisis | 24 Oktober 2026 |
-| Tujuan | Menyiapkan Curalyta untuk deployment di Google Cloud Platform (IaaS Compute Engine, PaaS Cloud Run, SaaS GitHub Actions dan Cloud Monitoring) sebagai bukti portofolio skema Insinyur Cloud Computing |
+| Tujuan | Menyiapkan Curalyta untuk deployment cloud sebagai bukti portofolio skema Insinyur Cloud Computing. Target awal adalah Google Cloud Platform; karena billing tidak dapat diaktifkan, deployment akhir memakai lab IaaS Proxmox, PaaS Vercel, dan SaaS GitHub Actions (lihat `DEPLOYMENT.md` bagian 0). |
 
-Dokumen ini mencatat kondisi repositori **sebelum** perubahan deployment. Setiap temuan diberi kode (T-xx) dan dirujuk oleh rencana tindak lanjut di bagian akhir.
+Dokumen ini mencatat kondisi repositori sebelum perubahan deployment. Setiap temuan diberi kode (T-xx) dan dirujuk oleh rencana tindak lanjut di bagian akhir.
 
 ## 1. Struktur folder
 
 ```
 curalyta/
-├── backend/                 API Express + Prisma (TypeScript) — aplikasi utama
+├── backend/                 API Express + Prisma (TypeScript) - aplikasi utama
 │   ├── prisma/              schema.prisma (14 model), migrations/20260422000000_init, seed.ts
 │   ├── src/
 │   │   ├── config/          pemuatan environment variable (index.ts, env-path.ts)
@@ -26,7 +26,7 @@ curalyta/
 │   │   └── server.ts        bootstrap Express
 │   ├── test/                node:test (*.test.cjs)
 │   └── docker-entrypoint.sh migrasi Prisma lalu start server
-├── frontend/                SPA React + Vite + Tailwind (TypeScript) — aplikasi utama
+├── frontend/                SPA React + Vite + Tailwind (TypeScript) - aplikasi utama
 │   ├── src/                 pages (admin, auth, doctor, patient), components, store, lib
 │   ├── vercel.json          rewrite /api ke Render (terikat Vercel)
 │   └── vite.config.ts/.js   proxy dev /api -> localhost:4000 (ada duplikat .js)
@@ -52,20 +52,20 @@ Root `package.json` adalah npm workspace (`backend`, `frontend`) dengan `engines
 
 ## 3. Konfigurasi database
 
-- `backend/prisma/schema.prisma` memakai `url = env("DATABASE_URL")` **dan** `directUrl = env("DIRECT_URL")`.
-- **T-01**: `DIRECT_URL` wajib ada saat Prisma CLI dijalankan (`migrate deploy`). `docker-compose.yml` lama **tidak** mengisi `DIRECT_URL`, sehingga migrasi di container berisiko gagal. `DIRECT_URL` diperlukan karena konfigurasi lama memakai pooler Neon; untuk PostgreSQL di VM nilainya sama dengan `DATABASE_URL`.
+- `backend/prisma/schema.prisma` memakai `url = env("DATABASE_URL")` dan `directUrl = env("DIRECT_URL")`.
+- T-01: `DIRECT_URL` wajib ada saat Prisma CLI dijalankan (`migrate deploy`). `docker-compose.yml` lama tidak mengisi `DIRECT_URL`, sehingga migrasi di container berisiko gagal. `DIRECT_URL` diperlukan karena konfigurasi lama memakai pooler Neon; untuk PostgreSQL di VM nilainya sama dengan `DATABASE_URL`.
 - Migrasi: satu migrasi awal `20260422000000_init`. Seed hanya membuat akun admin default.
-- **T-02**: `.env` lokal mengarah ke Neon (`*.neon.tech`). Endpoint Neon tersebut sudah tidak dapat dijangkau (diuji 23 Oktober 2026), sehingga produksi lama praktis tidak berjalan.
+- T-02: `.env` lokal mengarah ke Neon (`*.neon.tech`). Endpoint Neon tersebut sudah tidak dapat dijangkau (diuji 23 Oktober 2026), sehingga produksi lama praktis tidak berjalan.
 
 ## 4. Docker dan Compose yang sudah ada
 
 | Berkas | Kondisi | Temuan |
 |---|---|---|
-| `docker/backend.Dockerfile` | Multi-stage, user non-root `curalyta`, `node:20-alpine` | **T-03**: `node_modules` produksi menyalin seluruh devDependencies (ukuran image besar); tidak ada `HEALTHCHECK`. |
-| `docker/frontend.Dockerfile` | Multi-stage, runtime `nginx:1.27-alpine` | **T-04**: nginx berjalan sebagai root; konfigurasi proxy `/api` tertanam di image frontend. |
-| `docker/nginx.conf` | SPA + proxy `/api` ke `backend:4000` | **T-05**: tidak ada log berformat waktu respons; header keamanan belum lengkap (HSTS, Permissions-Policy). |
-| `docker-compose.yml` | postgres, backend, frontend | **T-06**: PostgreSQL membuka port 5432 dan backend membuka port 4000 ke host, sehingga terekspos jika dijalankan di VM publik. Tidak ada reverse proxy terpisah dan tidak ada healthcheck untuk backend/frontend. |
-| `.dockerignore` | Tidak ada di repo | **T-07**: `.gitignore` justru mengabaikan `.dockerignore`, sehingga build context mengirim `node_modules` dan `.env`. Ini risiko kebocoran secret ke image. |
+| `docker/backend.Dockerfile` | Multi-stage, user non-root `curalyta`, `node:20-alpine` | T-03: `node_modules` produksi menyalin seluruh devDependencies (ukuran image besar); tidak ada `HEALTHCHECK`. |
+| `docker/frontend.Dockerfile` | Multi-stage, runtime `nginx:1.27-alpine` | T-04: nginx berjalan sebagai root; konfigurasi proxy `/api` tertanam di image frontend. |
+| `docker/nginx.conf` | SPA + proxy `/api` ke `backend:4000` | T-05: tidak ada log berformat waktu respons; header keamanan belum lengkap (HSTS, Permissions-Policy). |
+| `docker-compose.yml` | postgres, backend, frontend | T-06: PostgreSQL membuka port 5432 dan backend membuka port 4000 ke host, sehingga terekspos jika dijalankan di VM publik. Tidak ada reverse proxy terpisah dan tidak ada healthcheck untuk backend/frontend. |
+| `.dockerignore` | Tidak ada di repo | T-07: `.gitignore` justru mengabaikan `.dockerignore`, sehingga build context mengirim `node_modules` dan `.env`. Ini risiko kebocoran secret ke image. |
 
 ## 5. Secret, URL, dan port yang di-hardcode
 
@@ -78,14 +78,14 @@ Root `package.json` adalah npm workspace (`backend`, `frontend`) dengan `engines
 | T-12 | `vite.config.ts` | Proxy dev `http://localhost:4000` | Hanya untuk dev; frontend memanggil API secara relatif (`baseURL: '/api'`), sehingga tidak perlu URL absolut di build. |
 | T-13 | Port | Backend 4000 (default kode), `.env` lokal 10000 (sisa Render), frontend dev 5173, compose 8080/4000/5432 | Perlu disatukan lewat environment variable. |
 
-Hasil pemindaian riwayat git (`git log --all -p`): **tidak ditemukan secret asli** yang pernah di-commit. Yang ada hanya placeholder (`USER:PASSWORD@...`, `sk-ant-api03-...`). File `.env` sudah tercantum di `.gitignore`.
+Hasil pemindaian riwayat git (`git log --all -p`): tidak ditemukan secret asli yang pernah di-commit. Yang ada hanya placeholder (`USER:PASSWORD@...`, `sk-ant-api03-...`). File `.env` sudah tercantum di `.gitignore`.
 
 ## 6. Cara JWT secret dimuat
 
-- `config.auth.jwtSecret = required('JWT_SECRET')`: aplikasi **berhenti saat start** bila `JWT_SECRET` kosong. Ini perilaku yang baik (fail fast).
-- `dotenv` memuat `backend/.env`, lalu `.env` di root sebagai cadangan (`config/env-path.ts`). Variabel yang sudah ada di environment proses **tidak ditimpa**, sehingga nilai dari Docker/Compose selalu menang.
+- `config.auth.jwtSecret = required('JWT_SECRET')`: aplikasi berhenti saat start bila `JWT_SECRET` kosong. Ini perilaku yang baik (fail fast).
+- `dotenv` memuat `backend/.env`, lalu `.env` di root sebagai cadangan (`config/env-path.ts`). Variabel yang sudah ada di environment proses tidak ditimpa, sehingga nilai dari Docker/Compose selalu menang.
 - JWT ditandatangani dan diverifikasi di `middleware/auth.ts` dengan masa berlaku `JWT_EXPIRES_IN` (default `7d`).
-- **T-14**: tidak ada panjang minimum yang dipaksakan; template berisi nilai contoh. Untuk produksi, secret dibangkitkan acak (64 byte hex) langsung di VM.
+- T-14: tidak ada panjang minimum yang dipaksakan; template berisi nilai contoh. Untuk produksi, secret dibangkitkan acak (64 byte hex) langsung di VM.
 
 ## 7. Bagian yang terikat ke Vercel/Render/Neon
 
@@ -98,7 +98,7 @@ Hasil pemindaian riwayat git (`git log --all -p`): **tidak ditemukan secret asli
 
 ## 8. Endpoint kesehatan
 
-- `GET /` dan `GET /api/health` hanya mengembalikan JSON statis. **T-15**: tidak ada pengecekan koneksi database dan tidak ada waktu respons, sehingga belum layak dijadikan target uptime check SLA.
+- `GET /` dan `GET /api/health` hanya mengembalikan JSON statis. T-15: tidak ada pengecekan koneksi database dan tidak ada waktu respons, sehingga belum layak dijadikan target uptime check SLA.
 
 ## 9. Rencana tindak lanjut (Tahap 2)
 
@@ -109,7 +109,7 @@ Hasil pemindaian riwayat git (`git log --all -p`): **tidak ditemukan secret asli
 | T-05, T-06 | Service `nginx` terpisah sebagai reverse proxy, satu-satunya yang membuka port 80/443. Backend, PostgreSQL, dan frontend hanya di jaringan internal Docker. Log akses berformat JSON dengan `request_time` dan `upstream_response_time`. |
 | T-07 | Tambah `.dockerignore`, lalu hapus `.dockerignore` dari `.gitignore`. |
 | T-08, T-09, T-14 | Compose mewajibkan `POSTGRES_PASSWORD`, `JWT_SECRET`, dan `ADMIN_PASSWORD` (`${VAR:?}`). Nilai produksi dibangkitkan acak di VM. Logika bisnis tidak diubah. |
-| T-10 | `vercel.json` dihapus karena hosting pindah ke GCP. |
+| T-10 | `vercel.json` lama (rewrite ke Render) dihapus; rewrite baru dibuat ke API produksi lab untuk staging Vercel. |
 | T-13 | Semua port dan origin melalui environment variable; `.env.example` lengkap di root. |
 | T-15 | `GET /health` dan `GET /api/health` mengecek `SELECT 1` ke database dan mengembalikan `status`, `database`, `responseTimeMs`, `timestamp`; HTTP 503 bila database gagal. |
-| Folder `ops/` | `backup-db.sh`, `restore-db.sh`, `deploy.sh`, `healthcheck.sh`, `provision-gcp.sh`. |
+| Folder `ops/` | `backup-db.sh`, `restore-db.sh`, `deploy.sh`, `healthcheck.sh`, `laporan-sla.sh`, dan `ops/lab/` untuk provisioning lab Proxmox. |

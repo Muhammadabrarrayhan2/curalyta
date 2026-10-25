@@ -7,11 +7,11 @@ Semua nama, alamat IP, dan port di dokumen ini adalah resource yang benar-benar 
 ```mermaid
 flowchart TB
   user([Pengguna / browser]):::ext
-  admin([Admin — laptop Windows<br/>192.168.45.1]):::ext
+  admin([Admin - laptop Windows<br/>192.168.45.1]):::ext
 
   subgraph PUBLIC["Public cloud (SaaS / PaaS)"]
     cf["Cloudflare edge<br/>HTTPS *.trycloudflare.com"]
-    vercel["Vercel — staging frontend (PaaS)"]
+    vercel["Vercel - staging frontend (PaaS)"]
     gh["GitHub<br/>repo + Actions + Secrets"]
     ghcr[("GHCR<br/>ghcr.io/muhammadabrarrayhan2/curalyta/{backend,frontend}")]
     groq["Groq API (AI)<br/>rotasi multi-key"]
@@ -19,14 +19,14 @@ flowchart TB
   end
 
   subgraph HOST["Laptop: Windows 11 + VMware Workstation 17.6 (Hyper-V off, VT-x nested)"]
-    subgraph NAT["VMware NAT vmnet8 — 192.168.45.0/24, gateway/DNS .2"]
-      subgraph PVE["Proxmox VE 9.2 — pve.curalyta.lab 192.168.45.10 (KVM)"]
+    subgraph NAT["VMware NAT vmnet8 - 192.168.45.0/24, gateway/DNS .2"]
+      subgraph PVE["Proxmox VE 9.2 - pve.curalyta.lab 192.168.45.10 (KVM)"]
         fw{{"Proxmox Firewall<br/>default DROP per VM"}}
         bridge["Bridge vmbr0"]
         lvm[("local-lvm<br/>block storage (LVM-thin)")]
         dump[("local: /var/lib/vz/dump<br/>vzdump harian, retensi 7")]
 
-        subgraph APP["VM 101 curalyta-app — 192.168.45.20 (Ubuntu 22.04, 2 vCPU, 2,5 GB)"]
+        subgraph APP["VM 101 curalyta-app - 192.168.45.20 (Ubuntu 22.04, 2 vCPU, 2,5 GB)"]
           tunnel["cloudflared<br/>curalyta-tunnel.service"]
           nginx["nginx :80<br/>reverse proxy"]
           fe["frontend :8080<br/>(non-root)"]
@@ -37,7 +37,7 @@ flowchart TB
           cron["cron 02:00<br/>backup-db.sh"]
         end
 
-        subgraph MON["VM 102 curalyta-monitor — 192.168.45.30 (Ubuntu 22.04, 2 vCPU, 1,5 GB)"]
+        subgraph MON["VM 102 curalyta-monitor - 192.168.45.30 (Ubuntu 22.04, 2 vCPU, 1,5 GB)"]
           prom["Prometheus :9090"]
           am["Alertmanager :9093"]
           graf["Grafana :3000"]
@@ -101,7 +101,7 @@ sequenceDiagram
 ## 3. Alur permintaan pengguna
 
 1. Browser membuka URL HTTPS publik (Cloudflare edge). TLS diterminasi di edge.
-2. Cloudflare meneruskan permintaan melalui tunnel yang dibuka **dari dalam** VM aplikasi (tidak ada port masuk yang dibuka di laptop atau router).
+2. Cloudflare meneruskan permintaan melalui tunnel yang dibuka dari dalam VM aplikasi (tidak ada port masuk yang dibuka di laptop atau router).
 3. `cloudflared` meneruskan ke `nginx:80` di VM yang sama.
 4. Nginx merutekan `/` ke container `frontend` (file statis React) dan `/api/*` serta `/health` ke `backend`.
 5. Backend memvalidasi JWT, menjalankan logika aplikasi, membaca/menulis PostgreSQL melalui Prisma, dan untuk fitur AI memanggil Groq API.

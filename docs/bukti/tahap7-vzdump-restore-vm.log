@@ -1,0 +1,55 @@
+# Lab 3 — Backup VM (vzdump) dan restore ke VM ID baru untuk verifikasi
+# Host: pve.curalyta.lab | Waktu (NTP): 2026-10-25 10:08:58 +0700
+
+## 1. Snapshot VM sebelum perubahan (qm snapshot) — mekanisme rollback cepat
+freeze guest filesystem
+snapshotting 'drive-scsi0' (local-lvm:vm-102-disk-0)
+  WARNING: You have not turned on protection against thin pools running out of space.
+  WARNING: Set activation/thin_pool_autoextend_threshold below 100 to trigger automatic extension of thin pools before they get full.
+  Logical volume "snap_vm-102-disk-0_sebelum-uji-restore" created.
+  WARNING: Sum of all thin volume sizes (67.21 GiB) exceeds the size of thin pool pve/data and the amount of free space in volume group (<9.88 GiB).
+thaw guest filesystem
+`-> sebelum-uji-restore         2026-10-25 10:08:59     Snapshot sebelum uji restore vzdump
+ `-> current                                            You are here!
+
+## 2. Backup VM 102 curalyta-monitor ke storage backup-disk (mode snapshot, zstd)
+INFO: Starting Backup of VM 102 (qemu)
+INFO: backup mode: snapshot
+INFO: creating vzdump archive '/mnt/backup-disk/dump/vzdump-qemu-102-2026_10_25-10_09_02.vma.zst'
+INFO: transferred 20.00 GiB in 43 seconds (476.3 MiB/s)
+INFO: archive file size: 1.78GB
+INFO: Finished Backup of VM 102 (00:00:44)
+INFO: Backup job finished successfully
+Durasi backup: 45 detik
+-rw-r--r-- 1 root root 1.8G Oct 25 10:09 /mnt/backup-disk/dump/vzdump-qemu-102-2026_10_25-10_09_02.vma.zst
+
+## 3. Restore ke VM ID baru 9102 (MAC unik, jaringan diputus agar tidak bentrok IP)
+  Logical volume "vm-9102-cloudinit" created.
+  Logical volume pve/vm-9102-cloudinit changed.
+  Logical volume "vm-9102-disk-0" created.
+  Logical volume pve/vm-9102-disk-0 changed.
+progress 100% (read 21474836480 bytes, duration 161 sec)
+rescan volumes...
+generating cloud-init ISO
+Durasi restore + boot sampai guest agent merespons: 327 detik
+
+## 4. Verifikasi isi VM hasil restore (lewat QEMU guest agent)
+"out-data" : "uji-restore-monitor\n"
+"out-data" : "activating\n"
+"out-data" : "alertmanager Up 4 seconds\nblackbox Up 4 seconds\ngarage Up 4 seconds\ngrafana Up 4 seconds\nprometheus Up 4 seconds\n"
+"out-data" : "eth0             DOWN           bc:24:11:69:48:0d <NO-CARRIER,BROADCAST,MULTICAST,UP> \n"
+
+## 5. Total waktu pemulihan VM (backup tidak termasuk): 327 detik vs target RTO 3600 detik
+
+## 6. Bersihkan: hapus VM uji, arsip uji, dan snapshot
+  Logical volume "vm-9102-cloudinit" successfully removed.
+  Logical volume "vm-9102-disk-0" successfully removed.
+purging VM 9102 from related configurations..
+VM 9102 dihapus
+Arsip uji dihapus dari backup-disk
+  Logical volume "snap_vm-102-disk-0_sebelum-uji-restore" successfully removed.
+Snapshot sebelum-uji-restore dihapus
+      VMID NAME                 STATUS     MEM(MB)    BOOTDISK(GB) PID       
+       101 curalyta-app         running    2048              25.00 1304      
+       102 curalyta-monitor     running    1280              20.00 1411      
+/dev/nvme0n1     30G  2.1M   28G   1% /mnt/backup-disk

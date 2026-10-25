@@ -1,7 +1,7 @@
 # Terminologi dan Konsep Cloud Computing
 
-**Unit kompetensi:** J.631120.001.01 — Mendefinisikan terminologi dan konsep cloud computing
-**Studi kasus:** Curalyta, platform layanan kesehatan (booking dokter, rekam medis, asisten AI)
+Unit kompetensi: J.631120.001.01, Mendefinisikan terminologi dan konsep cloud computing
+Studi kasus: Curalyta, platform layanan kesehatan (booking dokter, rekam medis, asisten AI)
 
 Dokumen ini menjelaskan setiap konsep dengan contoh dari implementasi Curalyta yang benar-benar dijalankan. Nama resource, alamat IP, dan perintah merujuk ke lingkungan yang dibangun; bukti eksekusinya ada di `docs/bukti/`.
 
@@ -17,7 +17,7 @@ Pada Curalyta, sumber daya disediakan dalam tiga lapisan:
 | Virtualisasi | VMware Workstation 17.6 → Proxmox VE 9.2 (hypervisor KVM) |
 | Layanan | VM `curalyta-app` dan `curalyta-monitor` (IaaS), Vercel (PaaS), GitHub, Groq API, ntfy.sh (SaaS) |
 
-> Catatan: Proxmox VE yang berjalan di atas VMware Workstation adalah **laboratorium virtualisasi**, bukan private cloud produksi. Seluruh mekanisme cloud (provisioning, isolasi, firewall, backup, monitoring) tetap dijalankan secara nyata.
+> Catatan: Proxmox VE yang berjalan di atas VMware Workstation adalah laboratorium virtualisasi, bukan private cloud produksi. Seluruh mekanisme cloud (provisioning, isolasi, firewall, backup, monitoring) tetap dijalankan secara nyata.
 
 ## 2. Lima karakteristik esensial (NIST)
 
@@ -33,9 +33,9 @@ Pada Curalyta, sumber daya disediakan dalam tiga lapisan:
 
 | Model | Yang dikelola penyedia | Yang dikelola pengguna | Implementasi di Curalyta |
 |---|---|---|---|
-| **IaaS** | Hardware, hypervisor, jaringan fisik | OS, runtime, aplikasi, data, keamanan OS | Proxmox VE menyediakan VM `curalyta-app` (101) dan `curalyta-monitor` (102). Tim Curalyta memasang Ubuntu 22.04, menambal OS (`unattended-upgrades`), memasang Docker, dan mengelola PostgreSQL |
-| **PaaS** | Hardware sampai runtime dan proses build | Kode aplikasi dan konfigurasi | Vercel membangun dan menyajikan frontend staging langsung dari repositori GitHub; tidak ada OS atau server yang dikelola |
-| **SaaS** | Seluruh aplikasi | Akun, akses, data, konfigurasi | GitHub (repositori, Actions, Secrets, GHCR), Groq API (model AI), ntfy.sh (notifikasi alert) |
+| IaaS | Hardware, hypervisor, jaringan fisik | OS, runtime, aplikasi, data, keamanan OS | Proxmox VE menyediakan VM `curalyta-app` (101) dan `curalyta-monitor` (102). Tim Curalyta memasang Ubuntu 22.04, menambal OS (`unattended-upgrades`), memasang Docker, dan mengelola PostgreSQL |
+| PaaS | Hardware sampai runtime dan proses build | Kode aplikasi dan konfigurasi | Vercel membangun dan menyajikan frontend staging langsung dari repositori GitHub; tidak ada OS atau server yang dikelola |
+| SaaS | Seluruh aplikasi | Akun, akses, data, konfigurasi | GitHub (repositori, Actions, Secrets, GHCR), Groq API (model AI), ntfy.sh (notifikasi alert) |
 
 Perbedaan IaaS dan PaaS paling terlihat saat menambal keamanan. Di VM `curalyta-app`, tim harus menjalankan patch OS dan me-restart container sendiri (`docs/AKTIVITAS_RUTIN.md`). Di Vercel, platform yang memperbarui sistem operasi dan runtime; tim hanya mengirim kode baru.
 
@@ -45,7 +45,7 @@ Perbedaan IaaS dan PaaS paling terlihat saat menambal keamanan. Di VM `curalyta-
 |---|---|---|
 | Public cloud | Infrastruktur milik penyedia, dipakai banyak pelanggan | Vercel, GitHub Actions, GHCR, Groq, Cloudflare |
 | Private cloud | Infrastruktur khusus satu organisasi | Lab Proxmox VE: hanya untuk Curalyta, berada di jaringan NAT `192.168.45.0/24` |
-| Hybrid cloud | Gabungan private dan public yang saling terhubung | **Model yang dipakai Curalyta.** Data pasien dan database tetap di private cloud (Proxmox), sedangkan staging frontend, CI/CD, dan registry image ada di public cloud. Keduanya dihubungkan oleh Cloudflare Tunnel (HTTPS keluar dari lab) dan runner GitHub self-hosted |
+| Hybrid cloud | Gabungan private dan public yang saling terhubung | Model yang dipakai Curalyta. Data pasien dan database tetap di private cloud (Proxmox), sedangkan staging frontend, CI/CD, dan registry image ada di public cloud. Keduanya dihubungkan oleh Cloudflare Tunnel (HTTPS keluar dari lab) dan runner GitHub self-hosted |
 | Community cloud | Dipakai bersama oleh komunitas dengan kebutuhan serupa | Tidak dipakai; contoh relevannya adalah cloud bersama antar rumah sakit untuk rujukan pasien |
 
 Alasan memilih hybrid: data kesehatan bersifat sensitif sehingga database disimpan di infrastruktur yang dikendalikan sendiri, sementara layanan yang tidak menyimpan data pasien (build, staging UI) memanfaatkan public cloud gratis.
@@ -59,10 +59,10 @@ Tanggung jawab keamanan dibagi antara penyedia dan pengguna sesuai model layanan
 | Fisik, listrik, pendinginan | Pemilik laptop | Penyedia | Penyedia |
 | Hypervisor | Admin lab (patch Proxmox) | Penyedia | Penyedia |
 | Jaringan dan firewall | Admin lab (firewall Proxmox per VM) | Penyedia | Penyedia |
-| Sistem operasi | **Tim Curalyta** (patch Ubuntu) | Penyedia | Penyedia |
-| Runtime dan container | **Tim Curalyta** (Docker, image) | Penyedia | Penyedia |
-| Aplikasi dan konfigurasi | **Tim Curalyta** | **Tim Curalyta** | **Tim Curalyta** (pengaturan repo, workflow) |
-| Data dan akses | **Tim Curalyta** | **Tim Curalyta** | **Tim Curalyta** (secret, token, hak akses) |
+| Sistem operasi | Tim Curalyta (patch Ubuntu) | Penyedia | Penyedia |
+| Runtime dan container | Tim Curalyta (Docker, image) | Penyedia | Penyedia |
+| Aplikasi dan konfigurasi | Tim Curalyta | Tim Curalyta | Tim Curalyta (pengaturan repo, workflow) |
+| Data dan akses | Tim Curalyta | Tim Curalyta | Tim Curalyta (secret, token, hak akses) |
 
 Contoh nyata tanggung jawab pengguna: secret produksi (password database, JWT secret, API key Groq) disimpan di `.env` VM dengan izin `600` dan tidak pernah di-commit; GitHub Actions memakai `GITHUB_TOKEN` berumur pendek untuk push image.
 
@@ -80,10 +80,10 @@ Kriteria kapan perlu scale up atau scale out dibahas di `docs/KEBUTUHAN_PERANGKA
 
 Multi-tenancy berarti beberapa penyewa (tenant) memakai infrastruktur yang sama dengan isolasi satu sama lain.
 
-- **Tingkat hypervisor:** VM `curalyta-app` dan `curalyta-monitor` berbagi CPU, RAM, dan disk host yang sama, tetapi terisolasi oleh KVM. Masing-masing punya kernel sendiri dan firewall sendiri (`/etc/pve/firewall/101.fw`, `102.fw`).
-- **Tingkat container:** di dalam VM aplikasi, container `nginx`, `frontend`, `backend`, dan `postgres` berbagi kernel tetapi terisolasi oleh namespace dan cgroup; hanya `nginx` yang membuka port ke luar.
-- **Tingkat aplikasi:** satu instance Curalyta melayani banyak dokter dan pasien. Isolasi data dilakukan oleh aplikasi: dokter hanya bisa membuka pasiennya sendiri (pemeriksaan `patient.doctorId` di backend).
-- **Public cloud:** Vercel dan GitHub Actions melayani jutaan pengguna di infrastruktur bersama; runner GitHub-hosted adalah VM sekali pakai yang dihapus setelah job selesai.
+- Tingkat hypervisor: VM `curalyta-app` dan `curalyta-monitor` berbagi CPU, RAM, dan disk host yang sama, tetapi terisolasi oleh KVM. Masing-masing punya kernel sendiri dan firewall sendiri (`/etc/pve/firewall/101.fw`, `102.fw`).
+- Tingkat container: di dalam VM aplikasi, container `nginx`, `frontend`, `backend`, dan `postgres` berbagi kernel tetapi terisolasi oleh namespace dan cgroup; hanya `nginx` yang membuka port ke luar.
+- Tingkat aplikasi: satu instance Curalyta melayani banyak dokter dan pasien. Isolasi data dilakukan oleh aplikasi: dokter hanya bisa membuka pasiennya sendiri (pemeriksaan `patient.doctorId` di backend).
+- Public cloud: Vercel dan GitHub Actions melayani jutaan pengguna di infrastruktur bersama; runner GitHub-hosted adalah VM sekali pakai yang dihapus setelah job selesai.
 
 ## 8. Service Level Agreement (SLA)
 

@@ -9,17 +9,17 @@ Alamat yang dipakai:
 - Produksi: URL di `/opt/curalyta/.public-url` (VM 101) · Staging: https://curalyta-frontend.vercel.app
 - GitHub: https://github.com/Muhammadabrarrayhan2/curalyta
 
-## Unit 1 — Terminologi dan konsep (J.631120.001.01)
+## Unit 1: Terminologi dan konsep (J.631120.001.01)
 
 | No | Halaman | Cara membuka | Yang harus terlihat |
 |---|---|---|---|
-| U1-01 | Proxmox Datacenter → Summary | Klik **Datacenter** | Sumber daya pool: CPU, RAM, storage (resource pooling) |
+| U1-01 | Proxmox Datacenter → Summary | Klik Datacenter | Sumber daya pool: CPU, RAM, storage (resource pooling) |
 | U1-02 | Proxmox → `pve` → VM 101 dan 102 di pohon kiri | Panel kiri | VM sebagai layanan IaaS (on-demand self-service) |
 | U1-03 | Aplikasi Curalyta di ponsel lewat URL publik | Buka URL produksi di HP | Broad network access |
 | U1-04 | Vercel → project curalyta-frontend → Deployments | vercel.com/dashboard | PaaS: platform yang build/deploy |
-| U1-05 | Grafana dashboard "Curalyta — SLA & Infrastruktur" | Dashboards → Curalyta | Measured service, target SLA 99% |
+| U1-05 | Grafana dashboard "Curalyta, SLA & Infrastruktur" | Dashboards → Curalyta | Measured service, target SLA 99% |
 
-## Unit 2 — Teknologi (J.631120.002.01)
+## Unit 2: Teknologi (J.631120.002.01)
 
 | No | Halaman | Cara membuka | Yang harus terlihat |
 |---|---|---|---|
@@ -31,7 +31,7 @@ Alamat yang dipakai:
 | U2-06 | Terminal VM 102: `docker compose exec garage /garage bucket info curalyta-db-backups` | SSH ke 192.168.45.30 | Object storage, izin key RW |
 | U2-07 | Proxmox → `pve` → `local-lvm` → VM Disks dan `backup-disk` → Backups | Panel storage | Block storage dan arsip backup |
 
-## Unit 3 — Perangkat keras (J.631120.003.01)
+## Unit 3: Perangkat keras (J.631120.003.01)
 
 | No | Halaman | Cara membuka | Yang harus terlihat |
 |---|---|---|---|
@@ -41,7 +41,7 @@ Alamat yang dipakai:
 | U3-04 | Grafana panel CPU, Memori, Disk, Jaringan (rentang 6 jam) | Dashboard Curalyta | Pemakaian nyata termasuk lonjakan uji beban |
 | U3-05 | Terminal VM 101: `docker stats --no-stream` | SSH | Pemakaian per container |
 
-## Unit 4 — Aktivitas rutin IaaS/PaaS/SaaS (J.631120.013.01)
+## Unit 4: Aktivitas rutin IaaS/PaaS/SaaS (J.631120.013.01)
 
 | No | Halaman | Cara membuka | Yang harus terlihat |
 |---|---|---|---|
@@ -54,7 +54,7 @@ Alamat yang dipakai:
 | U4-07 | Terminal VM: `sudo apt-get update && apt list --upgradable` | SSH | Patching OS |
 | U4-08 | Terminal VM 101: `tail /var/log/curalyta/curalyta-backup.log` | SSH | Log backup harian |
 
-## Unit 5 — Pemantauan sesuai SLA (J.631120.014.01)
+## Unit 5: Pemantauan sesuai SLA (J.631120.014.01)
 
 | No | Halaman | Cara membuka | Yang harus terlihat |
 |---|---|---|---|
@@ -65,7 +65,7 @@ Alamat yang dipakai:
 | U5-05 | Notifikasi ntfy di ponsel/browser | Aplikasi ntfy, langganan topik di `.env` VM 102 | Push alert firing/resolved |
 | U5-06 | Output `ops/laporan-sla.sh 24h` | Terminal | Ketersediaan, downtime, p95 vs target |
 
-## Unit 6 — Dukungan teknis (J.631120.015.01)
+## Unit 6: Dukungan teknis (J.631120.015.01)
 
 | No | Halaman | Cara membuka | Yang harus terlihat |
 |---|---|---|---|
