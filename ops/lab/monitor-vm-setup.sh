@@ -62,8 +62,11 @@ set -a; . "$MON_DIR/.env"; set +a
 step "4. Konfigurasi Alertmanager"
 # Judul dan isi notifikasi memakai template ntfy atas payload JSON Alertmanager.
 # ntfy.sh menolak email dari pengirim anonim (error 40053), jadi email hanya
-# diaktifkan bila NTFY_TOKEN (token akun ntfy gratis) diisi di .env; tanpa
-# token alert tetap terkirim sebagai push notification ke topik.
+# diaktifkan bila NTFY_TOKEN (token akun ntfy gratis yang email-nya sudah
+# diverifikasi di menu Account) diisi di .env; kuota akun gratis 5 email/hari.
+# Tanpa token alert tetap terkirim sebagai push notification ke topik.
+# Token dikirim lewat parameter ?auth= : base64 standar dari "Bearer <token>"
+# tanpa '=' di akhir (format resmi ntfy).
 NTFY_URL=$(NTFY_TOKEN="${NTFY_TOKEN:-}" python3 - <<EOF
 import base64, os
 from urllib.parse import urlencode
@@ -74,7 +77,7 @@ params = {"tpl": "yes", "t": title, "m": message, "tags": "rotating_light"}
 token = os.environ.get("NTFY_TOKEN", "")
 if token:
     params["email"] = "${ALERT_EMAIL}"
-    params["auth"] = base64.urlsafe_b64encode(f"Bearer {token}".encode()).decode().rstrip("=")
+    params["auth"] = base64.b64encode(f"Bearer {token}".encode()).decode().rstrip("=")
 print("https://ntfy.sh/${NTFY_TOPIC}?" + urlencode(params))
 EOF
 )
