@@ -1,0 +1,51 @@
+# Aktivitas rutin IaaS — patching OS Ubuntu + uji pasca-pemeliharaan
+# Laptop admin: 2026-10-25 10:23:59 +0700
+
+======== curalyta@192.168.45.20 ========
+Waktu VM: 2026-10-25 10:19:08 +0700 | kernel: 5.15.0-198-generic
+--- paket yang perlu diperbarui:
+jumlah: 0
+--- apt-get upgrade:
+reboot tidak diperlukan
+
+======== curalyta@192.168.45.30 ========
+Waktu VM: 2026-10-25 10:22:11 +0700 | kernel: 5.15.0-198-generic
+--- paket yang perlu diperbarui:
+jumlah: 0
+--- apt-get upgrade:
+reboot tidak diperlukan
+
+# Catatan: jam laptop ±4 menit lebih cepat dari VM; jam VM tersinkron NTP (chrony) dan menjadi acuan.
+
+======== Riwayat patch & status unattended-upgrades 192.168.45.20 ========
+unattended-upgrades: active
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+Upgrade: liblzma5:amd64 (5.2.5-2ubuntu1.1, 5.2.5-2ubuntu1.2), xz-utils:amd64 (5.2.5-2ubuntu1.1, 5.2.5-2ubuntu1.2), ubuntu-pro-client-l10n:amd64 (37.2ubuntu~22.04.1, 38ubuntu0~22.04), libnss3:amd64 (2:
+Start-Date: 2026-10-25  08:13:05
+Start-Date: 2026-10-25  09:38:00
+Start-Date: 2026-10-25  09:43:10
+
+======== Riwayat patch & status unattended-upgrades 192.168.45.30 ========
+unattended-upgrades: active
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+Start-Date: 2026-10-25  08:11:00
+Upgrade: liblzma5:amd64 (5.2.5-2ubuntu1.1, 5.2.5-2ubuntu1.2), xz-utils:amd64 (5.2.5-2ubuntu1.1, 5.2.5-2ubuntu1.2), ubuntu-pro-client-l10n:amd64 (37.2ubuntu~22.04.1, 38ubuntu0~22.04), libnss3:amd64 (2:
+Start-Date: 2026-10-25  08:13:14
+Start-Date: 2026-10-25  08:15:03
+
+======== Host Proxmox (patch di Tahap 3) ========
+pve-manager/9.2.21/4f6e0ac86f9e8c7f (running kernel: 7.0.14-25-pve)
+7.0.14-25-pve
+paket tertunda: 0
+
+======== Uji pasca-pemeliharaan ========
+[OK]   http://localhost:80/health HTTP 200 dalam 0.040923s
+       {"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-25T03:20:23.055Z","uptimeSeconds":576,"responseTimeMs":2.1,"database":{"status":"up","latencyMs":2.1}}
+[OK]   container backend running healthy
+[OK]   container frontend running healthy
+[OK]   container nginx running healthy
+[OK]   container postgres running healthy
+[OK]   disk / terpakai 18%
+2026-10-25T10:20:24+0700 [INFO] Healthcheck OK (http://localhost:80/health)

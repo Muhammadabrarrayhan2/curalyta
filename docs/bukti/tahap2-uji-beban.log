@@ -1,0 +1,22 @@
+# Uji performa & stres — k6 v1.3.0 dari VM 102 curalyta-monitor ke VM 101 curalyta-app (jaringan lab)
+# Mulai (jam VM, NTP): 2026-10-25 10:27:07 +0700
+# Skenario per iterasi: GET /health (memeriksa DB) + GET / (frontend via Nginx); tiap tingkat VU 30 detik
+# /api/* tidak dipakai: rate limit 200 req/15 menit per IP akan menghasilkan 429, bukan ukuran kinerja
+
+VU         req/s     avg_ms     p50_ms     p95_ms     max_ms   gagal%
+10        1472.8        6.7        4.8       16.6       39.4     0.00
+25        1606.6       15.5       10.6       37.9      183.6     0.00
+50        1617.9       30.8       20.5       74.3      644.3     0.00
+100       1608.4       61.9       37.7      135.4     2480.8     0.00
+200       1629.6      121.5       32.1      139.9     8260.0     0.00
+
+# Selesai (jam VM): 2026-10-25 10:29:57 +0700
+
+# Pemulihan setelah beban (recovery):
+ 10:29:58 up  1:11,  0 users,  load average: 4.25, 2.62, 1.32
+curalyta-backend-1	0.01%	55.62MiB / 1.918GiB
+curalyta-frontend-1	0.00%	4.391MiB / 1.918GiB
+curalyta-nginx-1	0.00%	6.992MiB / 1.918GiB
+curalyta-postgres-1	0.01%	59.14MiB / 1.918GiB
+curalyta-agents-cadvisor-1	0.00%	18.28MiB / 1.918GiB
+{"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-25T03:30:00.567Z","uptimeSeconds":998,"responseTimeMs":1.9,"database":{"status":"up","latencyMs":1.9}} | 0.017413s

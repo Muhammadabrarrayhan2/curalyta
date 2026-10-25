@@ -60,17 +60,25 @@ chmod 600 "$MON_DIR/.env"
 set -a; . "$MON_DIR/.env"; set +a
 
 step "4. Konfigurasi Alertmanager"
-# Judul dan isi notifikasi memakai template ntfy atas payload JSON Alertmanager
-NTFY_URL=$(python3 - <<EOF
+# Judul dan isi notifikasi memakai template ntfy atas payload JSON Alertmanager.
+# ntfy.sh menolak email dari pengirim anonim (error 40053), jadi email hanya
+# diaktifkan bila NTFY_TOKEN (token akun ntfy gratis) diisi di .env; tanpa
+# token alert tetap terkirim sebagai push notification ke topik.
+NTFY_URL=$(NTFY_TOKEN="${NTFY_TOKEN:-}" python3 - <<EOF
+import base64, os
 from urllib.parse import urlencode
 title = "[{{.status}}] {{.commonLabels.alertname}} ({{.commonLabels.priority}})"
 message = ("{{range .alerts}}{{.status}}: {{.annotations.summary}}\n"
            "Mulai: {{.startsAt}}\n{{end}}")
-params = {"tpl": "yes", "t": title, "m": message, "tags": "rotating_light",
-          "email": "${ALERT_EMAIL}"}
+params = {"tpl": "yes", "t": title, "m": message, "tags": "rotating_light"}
+token = os.environ.get("NTFY_TOKEN", "")
+if token:
+    params["email"] = "${ALERT_EMAIL}"
+    params["auth"] = base64.urlsafe_b64encode(f"Bearer {token}".encode()).decode().rstrip("=")
 print("https://ntfy.sh/${NTFY_TOPIC}?" + urlencode(params))
 EOF
 )
+[ -n "${NTFY_TOKEN:-}" ] && echo "Alert: push + email ke ${ALERT_EMAIL}" || echo "Alert: push ntfy (email butuh NTFY_TOKEN di .env)"
 NTFY_URL="$NTFY_URL" python3 -c '
 import os, sys
 src, dst = sys.argv[1], sys.argv[2]

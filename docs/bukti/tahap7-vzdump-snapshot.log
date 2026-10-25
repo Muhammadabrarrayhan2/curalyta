@@ -1,0 +1,55 @@
+# Lab 3 — Backup VM (vzdump) + snapshot/rollback VM
+# Host: pve.curalyta.lab | Waktu (NTP): 2026-10-25 10:16:28 +0700
+
+## 1. Backup VM 101 curalyta-app (vzdump, mode snapshot, zstd) ke storage backup-disk
+INFO: Starting Backup of VM 101 (qemu)
+INFO: backup mode: snapshot
+INFO: creating vzdump archive '/mnt/backup-disk/dump/vzdump-qemu-101-2026_10_25-10_16_29.vma.zst'
+INFO: transferred 25.00 GiB in 63 seconds (406.3 MiB/s)
+INFO: archive file size: 2.08GB
+INFO: Finished Backup of VM 101 (00:01:03)
+INFO: Backup job finished successfully
+Durasi backup: 64 detik
+-rw-r--r-- 1 root root 2.1G Oct 25 10:17 /mnt/backup-disk/dump/vzdump-qemu-101-2026_10_25-10_16_29.vma.zst
+
+## 2. Verifikasi integritas arsip
+/mnt/backup-disk/dump/vzdump-qemu-101-2026_10_25-10_16_29.vma.zst: 4924184576 bytes 
+cores: 2
+memory: 2048
+name: curalyta-app
+nameserver: 192.168.45.2
+net0: virtio=BC:24:11:B2:29:DB,bridge=vmbr0,firewall=1
+scsi0: local-lvm:vm-101-disk-0,discard=on,size=25G,ssd=1
+  Volid                                                          Format  Type            Size VMID
+  backup-disk:backup/vzdump-qemu-101-2026_10_25-10_16_29.vma.zst vma.zst backup    2238073000 101
+
+## 3. Snapshot + rollback VM 102 curalyta-monitor
+"-rw-r--r-- 1 root root 29 Oct 25 10:16 /root/penanda-sebelum-rollback.txt\n"
+Penanda A (/root/penanda-sebelum-rollback.txt) dibuat SEBELUM snapshot.
+Snapshot 'uji-rollback' dibuat:
+`-> uji-rollback                2026-10-25 10:17:43     Uji rollback Lab 3
+ `-> current                                            You are here!
+"/root/penanda-sebelum-rollback.txt\n/root/penanda-setelah-snapshot.txt\n"
+Penanda B (/root/penanda-setelah-snapshot.txt) dibuat SETELAH snapshot. Rollback dimulai 10:18:46
+  Logical volume "vm-102-disk-0" successfully removed.
+  WARNING: You have not turned on protection against thin pools running out of space.
+  WARNING: Set activation/thin_pool_autoextend_threshold below 100 to trigger automatic extension of thin pools before they get full.
+  Logical volume "vm-102-disk-0" created.
+  WARNING: Sum of all thin volume sizes (67.21 GiB) exceeds the size of thin pool pve/data and the amount of free space in volume group (<9.88 GiB).
+  Logical volume pve/vm-102-disk-0 changed.
+generating cloud-init ISO
+VM 102 kembali melayani setelah 36 detik
+Isi /root setelah rollback (yang diharapkan: hanya penanda A):
+"/root/penanda-sebelum-rollback.txt\n"
+"alertmanager Up 2 minutes\nblackbox Up 2 minutes\ngarage Up 2 minutes\ngrafana Up 2 minutes\nprometheus Up 2 minutes\n"
+  Logical volume "snap_vm-102-disk-0_uji-rollback" successfully removed.
+Snapshot uji dihapus
+
+## 4. Restore arsip vzdump ke VM ID baru: TIDAK dijalankan
+Alasan kapasitas: restore VM 101 butuh ±5,3 GB ruang tulis baru pada disk virtual Proxmox
+(file .vmdk di drive C: laptop), sementara C: tersisa ±4 GB. Prosedur ada di docs/SOP_OPERASIONAL.md bagian 7.
+Kemampuan pemulihan VM dibuktikan lewat: arsip vzdump lolos uji integritas + konfigurasi terbaca,
+dan rollback snapshot VM 102 di atas.
+      VMID NAME                 STATUS     MEM(MB)    BOOTDISK(GB) PID       
+       101 curalyta-app         running    2048              25.00 1304      
+       102 curalyta-monitor     running    1280              20.00 20664     
