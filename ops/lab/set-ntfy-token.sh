@@ -18,10 +18,22 @@ ALERT_EMAIL="${ALERT_EMAIL:-abrarrayhan8@gmail.com}"
 
 read -rsp "Tempel token akses ntfy (diawali tk_), lalu Enter: " token
 echo
+token=$(printf '%s' "$token" | tr -d '[:space:]')
 case "$token" in
   tk_*) ;;
   *) echo "Token tidak valid: harus diawali tk_" >&2; exit 1 ;;
 esac
+# Token ntfy = "tk_" + 29 karakter; paste yang terpotong ditolak sebelum disimpan
+if [ "${#token}" -ne 32 ]; then
+  echo "Token terpotong: panjangnya ${#token} karakter, seharusnya 32. Salin ulang dari ntfy.sh → Account." >&2
+  exit 1
+fi
+kode=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" https://ntfy.sh/v1/account)
+if [ "$kode" != "200" ]; then
+  echo "Token ditolak ntfy.sh (HTTP $kode). Pastikan token masih aktif di Account → Access tokens." >&2
+  exit 1
+fi
+echo "Token valid."
 
 printf '%s' "$token" | ssh -i "$KEY" -o BatchMode=yes "$MON" '
   set -e
