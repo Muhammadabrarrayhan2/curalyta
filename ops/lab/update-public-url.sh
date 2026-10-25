@@ -59,7 +59,7 @@ cat > frontend/vercel.json <<EOF
   ]
 }
 EOF
-if git diff --quiet -- frontend/vercel.json; then
+if [ -z "$(git status --porcelain -- frontend/vercel.json)" ]; then
   echo "frontend/vercel.json sudah sesuai"
 elif $PUSH; then
   git add frontend/vercel.json

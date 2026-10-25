@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://decisions-levitra-clause-immune.trycloudflare.com/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
