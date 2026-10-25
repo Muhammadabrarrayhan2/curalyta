@@ -26,7 +26,7 @@ Status: "Ada" berarti berkas sudah ada di `docs/screenshot/`. "Manual" berarti h
 | U1-01 | `U1-01-proxmox-datacenter-summary.png` | Datacenter Summary: 1 node online, 2 VM berjalan, 1 template (resource pooling) | Ada |
 | U1-02 | `U1-02-proxmox-daftar-vm.png` | Daftar resource: VM 101/102, template 9000, tiga storage, pemakaian CPU/RAM/disk | Ada |
 | U1-03 | `U1-03-akses-ponsel-url-publik.png` | Aplikasi di layar ponsel (390 px) lewat URL publik HTTPS (broad network access) | Ada |
-| U1-04 | `U1-04-vercel-deployments.png` | Vercel → project curalyta-frontend → Deployments (PaaS) | Manual |
+| U1-04 | `U1-04-vercel-deployments.png` | Vercel → project curalyta-frontend → Deployments: setiap commit dibangun otomatis oleh platform (PaaS), status Ready | Ada (pemilik akun) |
 | U1-05 | `U1-05-grafana-dashboard-sla.png` | Dashboard Grafana "Curalyta, SLA & Infrastruktur" (measured service, target 99%) | Ada |
 
 ## Unit 2: Teknologi (J.631120.002.01)
@@ -63,7 +63,7 @@ Status: "Ada" berarti berkas sudah ada di `docs/screenshot/`. "Manual" berarti h
 | U4-03b | `U4-03b-github-actions-run-detail.png` | Satu run sukses: Test → Build & push → Deploy ke lab | Ada |
 | U4-04 | `U4-04-github-runner.png` | GitHub → Settings → Actions → Runners: runner `curalyta-app` online | Manual |
 | U4-05 | `U4-05-github-secrets.png` | GitHub → Settings → Secrets and variables → Actions (nilai tersembunyi) | Manual |
-| U4-06 | `U4-06-vercel-deployments.png` | Vercel → Deployments (riwayat, Promote/Rollback) | Manual |
+| U4-06 | `U4-06-vercel-deployment-detail.png` | Detail satu deployment Production: status Ready (Stale, sudah digantikan deployment lebih baru), durasi build 32 s. Deployment lama tetap tersimpan dan bisa di-promote kembali sebagai rollback | Ada (pemilik akun) |
 | U4-07 | `U4-07-patching-os.png` | `apt list --upgradable` kosong, unattended-upgrades aktif, riwayat apt | Ada |
 | U4-08 | `U4-08-log-backup-harian.png` | Cron 02:00, log backup ke `s3://curalyta-db-backups`, file dump + sha256 | Ada |
 
@@ -106,10 +106,11 @@ Catatan U5-04: Alertmanager hanya menampilkan alert yang sedang aktif, dan saat 
 
 Simpan dengan nama berkas pada tabel di atas. Pastikan jam taskbar terlihat.
 
-1. U1-04 dan U4-06: login vercel.com → project `curalyta-frontend` → Deployments.
-2. U2-01: jendela VMware Workstation saat `curalyta-pve` berjalan.
-3. U3-01: Task Manager (Ctrl+Shift+Esc) → Performance.
-4. U4-04: github.com/Muhammadabrarrayhan2/curalyta → Settings → Actions → Runners.
-5. U4-05: Settings → Secrets and variables → Actions.
-6. U5-05b: aplikasi ntfy di ponsel yang berlangganan topik alert, dan email alert setelah token ntfy dipasang (`ops/lab/set-ntfy-token.sh`).
-7. U6-01 (opsional): hanya bila simulasi insiden diulang di jendela pemeliharaan.
+U1-04 dan U4-06 diambil oleh pemilik akun dari dashboard Vercel. Jam pada bingkainya adalah waktu berkas disimpan, dikonversi ke jam lab.
+
+1. U2-01: jendela VMware Workstation saat `curalyta-pve` berjalan.
+2. U3-01: Task Manager (Ctrl+Shift+Esc) → Performance.
+3. U4-04: github.com/Muhammadabrarrayhan2/curalyta → Settings → Actions → Runners.
+4. U4-05: Settings → Secrets and variables → Actions.
+5. U5-05b: aplikasi ntfy di ponsel yang berlangganan topik alert, dan email alert setelah token ntfy dipasang (`ops/lab/set-ntfy-token.sh`).
+6. U6-01 (opsional): hanya bila simulasi insiden diulang di jendela pemeliharaan.
