@@ -32,9 +32,12 @@ now_epoch=$(date +%s)
 availability=$(q "100 * avg(avg_over_time(probe_success{$SEL}[$PERIOD]))")
 samples=$(q "sum(count_over_time(probe_success{$SEL}[$PERIOD]))")
 failed=$(q "sum(count_over_time((probe_success{$SEL} == 0)[$PERIOD:30s]))")
-latency_avg=$(q "avg(avg_over_time(probe_duration_seconds{$SEL}[$PERIOD]))")
-latency_p95=$(q "max(quantile_over_time(0.95, probe_duration_seconds{$SEL}[$PERIOD]))")
-latency_max=$(q "max(max_over_time(probe_duration_seconds{$SEL}[$PERIOD]))")
+# Waktu respons diukur hanya pada pemeriksaan yang berhasil; pemeriksaan gagal
+# (timeout saat layanan mati) sudah dihitung sebagai downtime.
+OK_DUR="(probe_duration_seconds{$SEL} and on(instance) probe_success{$SEL} == 1)"
+latency_avg=$(q "avg(avg_over_time(${OK_DUR}[$PERIOD:30s]))")
+latency_p95=$(q "max(quantile_over_time(0.95, ${OK_DUR}[$PERIOD:30s]))")
+latency_max=$(q "max(max_over_time(${OK_DUR}[$PERIOD:30s]))")
 incidents=$(q "sum(changes(probe_success{$SEL}[$PERIOD])) / 2")
 public_avail=$(q "100 * avg(avg_over_time(probe_success{job=\"blackbox-health\",path=\"public\"}[$PERIOD]))")
 backup_age=$(q "time() - max(curalyta_backup_last_success_timestamp_seconds)")
