@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://decisions-levitra-clause-immune.trycloudflare.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://produces-solving-teddy-itself.trycloudflare.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
