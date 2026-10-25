@@ -13,7 +13,9 @@ groups:
           description: "Uptime check /health gagal selama lebih dari 1 menit (jalur {{ $labels.path }})."
 
       - alert: WaktuResponsLambat
-        expr: probe_duration_seconds{job="blackbox-health"} > 1
+        # Target SLA latensi didefinisikan pada jalur internal (docs/SLA.md);
+        # jalur publik lewat quick tunnel wajar mendekati 1 detik.
+        expr: probe_duration_seconds{job="blackbox-health",path="internal"} > 1
         for: 5m
         labels:
           severity: warning

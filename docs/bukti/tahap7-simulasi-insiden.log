@@ -1,0 +1,52 @@
+# Simulasi insiden INC-001 — container backend dihentikan di VM curalyta-app
+# Waktu = jam VM curalyta-app (tersinkron NTP, WIB). Topik ntfy disamarkan.
+
+## 0. Kondisi awal
+[2026-10-25 11:50:23 +0700] alert LayananTidakTersedia (internal): none
+[2026-10-25 11:50:24 +0700] probe_success: internal=1, public=1
+
+## 1. Gangguan
+[2026-10-25 11:50:25 +0700] docker compose stop backend
+ Container curalyta-backend-1 Stopped 
+[2026-10-25 11:50:26 +0700] dampak ke pengguna: GET /health -> HTTP 000
+[2026-10-25 11:51:09 +0700] Prometheus: alert PENDING (probe gagal, menunggu durasi 'for: 1m')
+
+## 2. Deteksi dan notifikasi
+[2026-10-25 11:52:08 +0700] Prometheus: alert LayananTidakTersedia FIRING (+103 s)
+  Alertmanager: LayananTidakTersedia P1 http://192.168.45.20/health startsAt 2026-10-25T04:51:59.263Z
+  Alertmanager: LayananTidakTersedia P1 https://produces-solving-teddy-itself.trycloudflare.com/health startsAt 2026-10-25T04:51:44.263Z
+[2026-10-25 11:52:10 +0700] ntfy.sh menerima notifikasi (+106 s):
+  11:52:01 | [firing] LayananTidakTersedia (P1) | firing: Endpoint https://produces-solving-teddy-itself.trycloudflare.com/health gagal health check / Mulai: 2026-10-25T04:51:44.263Z
+
+## 3. Diagnosis (L1)
+[2026-10-25 11:52:11 +0700] ops/healthcheck.sh:
+  [FAIL] http://localhost:80/health HTTP 502 dalam 3.088495s
+  [FAIL] container backend exited -
+  [OK]   container frontend running healthy
+  [OK]   container nginx running healthy
+  [OK]   container postgres running healthy
+  [OK]   disk / terpakai 19%
+  status backend: backend exited Exited (0) About a minute ago
+  akses terakhir di log nginx:
+    "time":"2026-10-25T04:52:02+00:00","remote_addr":"172.19.0.1","method":"GET","uri":"/health","status":502
+    "time":"2026-10-25T04:52:15+00:00","remote_addr":"172.19.0.1","method":"GET","uri":"/health","status":502
+[2026-10-25 11:52:19 +0700] Kesimpulan: container backend berhenti; nginx membalas 502/504. Tindakan dalam kewenangan L1: jalankan ulang backend.
+
+## 4. Pemulihan
+[2026-10-25 11:52:19 +0700] docker compose start backend
+[2026-10-25 11:52:27 +0700] backend healthy; GET /health -> HTTP 200
+[2026-10-25 11:53:12 +0700] Prometheus: alert RESOLVED, probe_success kembali 1
+[2026-10-25 11:54:05 +0700] ntfy.sh menerima notifikasi RESOLVED:
+  11:54:01 | [resolved] LayananTidakTersedia (P1) | resolved: Endpoint https://produces-solving-teddy-itself.trycloudflare.com/health gagal health check / Mulai: 2026-10-25T04:51:44.263Z
+
+## 5. Verifikasi akhir
+  [OK]   http://localhost:80/health HTTP 200 dalam 0.033322s
+         {"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-25T04:54:06.728Z","uptimeSeconds":102,"responseTimeMs":4.5,"database":{"status":"up","latencyMs":4.4}}
+
+## Ringkasan durasi (detik, jam VM)
+  gangguan -> alert firing (deteksi)      : 103
+  gangguan -> notifikasi diterima ntfy   : 106
+  gangguan -> backend sehat (pemulihan)   : 124
+  gangguan -> alert resolved              : 167
+  deteksi  -> pemulihan (waktu penanganan): 21
+[2026-10-25 11:54:21 +0700] runner dinyalakan kembali (deploy freeze selesai): active
