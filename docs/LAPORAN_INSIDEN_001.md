@@ -104,3 +104,21 @@ Pencegahan.
 2. Matikan sleep laptop saat terhubung daya.
 3. Jangka panjang: named tunnel Cloudflare dengan domain sendiri agar URL tetap.
 4. Tambahkan uptime check eksternal (lihat `PEMANTAUAN.md` 5.2).
+
+## Lampiran B: INC-003 URL publik berubah setelah lab reboot (nyata, 25 Oktober 2026)
+
+| Atribut | Nilai |
+|---|---|
+| Prioritas | P1 (jalur publik tidak dapat diakses; jalur internal sehat) |
+| Mulai | ±16:08 WIB, host Proxmox dan kedua VM menyala ulang (`uptime -s` pve 16:08:46, curalyta-app 16:09:21) |
+| Terdeteksi | Alert `LayananTidakTersedia` (P1) 16:11 WIB dan `HalamanWebGagal` (P2) 16:14 WIB, diterima di aplikasi ntfy ponsel |
+| Pulih | 16:23 WIB alert resolved; semua probe (produksi dan staging) UP 16:24 WIB |
+| Durasi dampak | ±15 menit |
+
+Ringkasan. Seluruh lab menyala ulang (laptop host/VMware dimulai ulang). Aplikasi, database, dan monitoring kembali normal secara otomatis (`onboot=1`, `restart: unless-stopped`). Service `curalyta-tunnel` juga aktif kembali, tetapi quick tunnel Cloudflare selalu memberi URL baru (`https://flashing-followed-montgomery-ccd.trycloudflare.com`). Uptime check, CORS, dan rewrite Vercel masih mengarah ke URL lama, sehingga jalur publik dianggap mati.
+
+Diagnosis. Internal `/health` HTTP 200; URL lama HTTP 000; log `cloudflared` sejak boot menunjukkan URL baru dan koneksi terdaftar; URL baru HTTP 200.
+
+Pemulihan. `ops/lab/update-public-url.sh` dari laptop admin memperbarui CORS, target Prometheus, dan rewrite Vercel (commit `6e7487a`). Alert resolved otomatis, lalu probe staging Vercel kembali UP setelah deployment Vercel selesai.
+
+Pencegahan. Watchdog hanya menangani tunnel kedaluwarsa, tidak menangani URL baru setelah reboot. Solusi permanennya sama dengan INC-002: named tunnel dengan domain tetap, sehingga reboot tidak mengubah alamat publik.
