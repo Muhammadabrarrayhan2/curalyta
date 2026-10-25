@@ -51,6 +51,7 @@ objstore() {
     -e RCLONE_CONFIG_BACKUP_REGION=garage \
     -e RCLONE_CONFIG_BACKUP_FORCE_PATH_STYLE=true \
     -e RCLONE_CONFIG_BACKUP_NO_CHECK_BUCKET=true \
+    -e RCLONE_CONFIG=/dev/null -e RCLONE_LOG_LEVEL=ERROR \
     -v "${BACKUP_DIR:-/var/backups/curalyta}:/backups" \
     "${RCLONE_IMAGE:-rclone/rclone:1.71.1}" "$@"
 }

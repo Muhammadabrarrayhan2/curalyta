@@ -1,0 +1,74 @@
+# Tahap 4–5 — CI/CD GitHub Actions, deploy lab, staging PaaS Vercel
+# Dikumpulkan: 2026-10-25 10:09:57 +0700 (laptop admin; waktu run dari GitHub dalam UTC/Z)
+
+## Riwayat run workflow CI/CD (gh run list)
+# Catatan: run 'failure' 506b97d = test lama khusus Windows (diperbaiki), 137c960 = bug deploy.sh
+# (tag image tidak ter-export) yang diperbaiki di c3bfa30; 'cancelled' = digantikan run lebih baru.
+2026-10-25T03:03:55Z  run 40156816495  fd94864  push  completed/success
+2026-10-25T02:58:36Z  run 40156476557  3e1d67a  push  completed/success
+2026-10-25T02:54:21Z  run 40156218643  2d065e1  push  completed/success
+2026-10-25T02:47:53Z  run 40155816334  c3bfa30  push  completed/success
+2026-10-25T02:35:31Z  run 40155029406  137c960  push  completed/failure
+2026-10-25T02:33:51Z  run 40154921051  9e0190c  push  completed/cancelled
+2026-10-25T02:29:19Z  run 40154625897  c031cde  push  completed/cancelled
+2026-10-25T02:17:42Z  run 40153905226  ec8db3f  push  completed/cancelled
+2026-10-25T01:14:08Z  run 40149829175  58287a1  push  completed/cancelled
+2026-10-24T16:19:02Z  run 40110987985  4c22f21  push  completed/cancelled
+2026-10-24T16:17:11Z  run 40110849689  506b97d  push  completed/failure
+
+## Detail run 40156816495 (commit fd94864) — https://github.com/Muhammadabrarrayhan2/curalyta/actions/runs/40156816495
+  Test & typecheck: success  (2026-10-25T03:04:53Z → 2026-10-25T03:05:33Z)
+  Build & push images: success  (2026-10-25T03:05:35Z → 2026-10-25T03:06:03Z)
+  Deploy ke lab (VM curalyta-app): success  (2026-10-25T03:06:15Z → 2026-10-25T03:07:13Z)
+
+## Runner self-hosted
+  curalyta-app status=online os=Linux labels=self-hosted,Linux,X64,curalyta-lab
+  service di VM: active
+  2026-10-25 02:49:19Z: Running job: Deploy ke lab (VM curalyta-app)
+  2026-10-25 02:52:12Z: Job Deploy ke lab (VM curalyta-app) completed with result: Succeeded
+  2026-10-25 02:55:40Z: Running job: Deploy ke lab (VM curalyta-app)
+  2026-10-25 02:56:45Z: Job Deploy ke lab (VM curalyta-app) completed with result: Succeeded
+  2026-10-25 03:00:22Z: Running job: Deploy ke lab (VM curalyta-app)
+  2026-10-25 03:02:15Z: Job Deploy ke lab (VM curalyta-app) completed with result: Succeeded
+  2026-10-25 03:03:40Z: Running job: Deploy ke lab (VM curalyta-app)
+  2026-10-25 03:04:37Z: Job Deploy ke lab (VM curalyta-app) completed with result: Succeeded
+
+## Image di GHCR (log job build run 40156816495)
+  pushing manifest for ghcr.io/muhammadabrarrayhan2/curalyta/backend:fd94864@sha256:5c27e1f58584e64f1759da691bda6a56290584ce144e50b778f9c5b59e8857b3
+  pushing manifest for ghcr.io/muhammadabrarrayhan2/curalyta/backend:latest@sha256:5c27e1f58584e64f1759da691bda6a56290584ce144e50b778f9c5b59e8857b3
+  pushing manifest for ghcr.io/muhammadabrarrayhan2/curalyta/frontend:fd94864@sha256:685e53e6b55fb77dde741d802828645fc6d2751cf08e7c98cf1acef48b3e2ee9
+  pushing manifest for ghcr.io/muhammadabrarrayhan2/curalyta/frontend:latest@sha256:685e53e6b55fb77dde741d802828645fc6d2751cf08e7c98cf1acef48b3e2ee9
+
+## Log deploy di VM curalyta-app (/var/log/curalyta/curalyta-deploy.log)
+  2026-10-25T09:56:27+0700 [INFO] Deploy tag 2d065e1 selesai
+  2026-10-25T10:00:41+0700 [INFO] Deploy tag 3e1d67a dimulai
+  2026-10-25T10:00:44+0700 [INFO] Konfigurasi di commit 3e1d67a
+  2026-10-25T10:00:44+0700 [INFO] Deploy tag 3e1d67a dimulai
+  2026-10-25T10:01:27+0700 [INFO] Deploy tag 3e1d67a selesai
+  2026-10-25T10:03:56+0700 [INFO] Deploy tag fd94864 dimulai
+  2026-10-25T10:03:59+0700 [INFO] Konfigurasi di commit fd94864
+  2026-10-25T10:03:59+0700 [INFO] Deploy tag fd94864 dimulai
+  2026-10-25T10:04:23+0700 [INFO] Deploy tag fd94864 selesai
+
+## Container produksi
+backend	ghcr.io/muhammadabrarrayhan2/curalyta/backend:fd94864	Up About a minute (healthy)	4000/tcp
+frontend	ghcr.io/muhammadabrarrayhan2/curalyta/frontend:fd94864	Up About a minute (healthy)	8080/tcp
+nginx	nginx:1.27-alpine	Up 13 minutes (healthy)	0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp
+postgres	postgres:16-alpine	Up 14 minutes (healthy)	5432/tcp
+
+## Produksi via HTTPS publik (Cloudflare Tunnel): https://decisions-levitra-clause-immune.trycloudflare.com
+  {"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-25T03:05:27.781Z","uptimeSeconds":68,"responseTimeMs":2.5,"database":{"status":"up","latencyMs":2.5}} | HTTP 200, 0.105267s
+
+## Staging PaaS (Vercel) memanggil API produksi lewat rewrite /api (frontend/vercel.json)
+  https://curalyta-frontend.vercel.app/  -> HTTP 200
+  https://curalyta-frontend.vercel.app/api/health -> {"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-25T03:05:28.665Z","uptimeSeconds":69,"responseTimeMs":4.4,"database":{"status":"up","latencyMs":4}} | HTTP 200, 0.763950s
+  https://curalyta-frontend-hxd7.vercel.app/  -> HTTP 200
+  https://curalyta-frontend-hxd7.vercel.app/api/health -> {"status":"ok","service":"curalyta-api","version":"1.0.0","timestamp":"2026-10-25T03:05:29.611Z","uptimeSeconds":70,"responseTimeMs":3.4,"database":{"status":"up","latencyMs":3.4}} | HTTP 200, 0.202087s
+
+## Deployment Vercel (GitHub Deployments API)
+  2026-10-25T03:06:03Z  production-lab  fd94864
+  2026-10-25T03:04:33Z  Production – curalyta-frontend-hxd7  fd94864
+  2026-10-25T03:04:16Z  Production – curalyta-frontend  fd94864
+  2026-10-25T03:00:06Z  production-lab  3e1d67a
+  2026-10-25T02:59:13Z  Production – curalyta-frontend  3e1d67a
+  2026-10-25T02:58:54Z  Production – curalyta-frontend-hxd7  3e1d67a

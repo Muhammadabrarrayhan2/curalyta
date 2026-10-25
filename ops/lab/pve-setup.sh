@@ -14,7 +14,8 @@
 #   6. Disk backup terpisah (storage backup-disk) + jadwal vzdump harian
 #
 # Kapasitas: SSD laptop hanya menyisakan ~20 GB, sehingga VM dibuat sebagai
-# linked clone dari template dan retensi vzdump dibatasi 2 arsip per VM
+# linked clone dari template. vzdump terjadwal hanya untuk VM aplikasi (data
+# dan layanan utama) dengan 1 arsip; VM monitoring dibangun ulang dari skrip
 # (analisis di docs/KEBUTUHAN_PERANGKAT_KERAS.md).
 #
 # Topologi (VMware NAT vmnet8 192.168.45.0/24, gateway .2):
@@ -256,9 +257,11 @@ fi
 df -h "$BACKUP_MOUNT" 2>/dev/null || true
 if ! pvesh get /cluster/backup --output-format json | grep -q '"id":"curalyta-daily"'; then
   pvesh create /cluster/backup --id curalyta-daily --schedule '01:30' \
-    --vmid "${APP_ID},${MON_ID}" --storage "$target_storage" --mode snapshot \
-    --compress zstd --prune-backups keep-last=2 --enabled 1 \
+    --vmid "${APP_ID}" --storage "$target_storage" --mode snapshot \
+    --compress zstd --prune-backups keep-last=1 --enabled 1 \
     --notes-template '{{guestname}} harian'
+else
+  pvesh set /cluster/backup/curalyta-daily --vmid "${APP_ID}" --prune-backups keep-last=1
 fi
 pvesh get /cluster/backup --output-format yaml
 
