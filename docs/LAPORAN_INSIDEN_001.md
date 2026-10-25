@@ -70,7 +70,7 @@ Downtime tidak terencana yang setara: 2 menit 2 detik. Anggaran downtime bulanan
 
 | No | Temuan selama pelaksanaan | Tindakan | Status |
 |---|---|---|---|
-| 1 | ntfy.sh menolak email anonim; notifikasi pertama gagal (error 40053) | Alert dikirim sebagai push; email butuh `NTFY_TOKEN` | Selesai (`0423955`) |
+| 1 | ntfy.sh menolak email anonim; notifikasi pertama gagal (error 40053) | Alert dikirim sebagai push; email aktif setelah token akun ntfy dipasang (`ops/lab/set-ntfy-token.sh`, email uji diterima 25-10-2026 14:17 WIB) | Selesai (`0423955`, `d2d9109`) |
 | 2 | Deploy CI/CD otomatis bisa menyalakan ulang layanan di tengah penanganan insiden | Bekukan deploy (hentikan runner) selama insiden; dicatat di SOP | Selesai (dijalankan pada simulasi ini) |
 | 3 | Laptop host tidur di tengah percobaan pertama sehingga timeline tidak valid | Matikan sleep saat terhubung daya; chrony `makestep 1 -1` | Selesai (`ed8af70`) |
 | 4 | Deteksi butuh 103 s | Dapat dipercepat menjadi ±45 s dengan probe 15 s dan `for: 30s`, dengan risiko alert palsu lebih tinggi | Dipertimbangkan |

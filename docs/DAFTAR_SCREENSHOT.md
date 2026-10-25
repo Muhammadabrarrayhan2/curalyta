@@ -77,7 +77,8 @@ Status: "Ada" berarti berkas sudah ada di `docs/screenshot/`. "Manual" berarti h
 | U5-04a | `U5-04a-prometheus-alert-firing-insiden.png` | Grafik `ALERTS{alertstate="firing"}` pada rentang INC-001: LayananTidakTersedia (P1) dan HalamanWebGagal | Ada |
 | U5-04b | `U5-04b-alertmanager-status.png` | Status dan konfigurasi Alertmanager (route ke ntfy) | Ada |
 | U5-05 | `U5-05-ntfy-topik-notifikasi.png` | Notifikasi firing/resolved di ntfy.sh (web) | Ada |
-| U5-05b | `U5-05b-ntfy-ponsel.png` | Notifikasi yang sama di aplikasi ntfy ponsel dan email | Manual |
+| U5-05b | `U5-05b-ntfy-email-alert.png` | Email alert dari ntfy.sh ke abrarrayhan8@gmail.com (uji 25-10-2026 14:17:58 WIB), setelah token akun ntfy dipasang dengan `ops/lab/set-ntfy-token.sh`. Akhiran topik dan IP pengirim ditutup | Ada (pemilik akun) |
+| U5-05c | `U5-05c-ntfy-ponsel.png` | Notifikasi push di aplikasi ntfy ponsel | Manual |
 | U5-06 | `U5-06-laporan-sla-24h.png` | Keluaran `ops/laporan-sla.sh 24h` | Ada |
 
 Catatan U5-04: Alertmanager hanya menampilkan alert yang sedang aktif, dan saat pengambilan tidak ada alert aktif. Karena itu bukti alert firing diambil dari riwayat Prometheus pada rentang insiden (U5-04a) dan dari notifikasi ntfy (U5-05).
@@ -112,5 +113,5 @@ U1-04 dan U4-06 diambil oleh pemilik akun dari dashboard Vercel. Jam pada bingka
 2. U3-01: Task Manager (Ctrl+Shift+Esc) → Performance.
 3. U4-04: github.com/Muhammadabrarrayhan2/curalyta → Settings → Actions → Runners.
 4. U4-05: Settings → Secrets and variables → Actions.
-5. U5-05b: aplikasi ntfy di ponsel yang berlangganan topik alert, dan email alert setelah token ntfy dipasang (`ops/lab/set-ntfy-token.sh`).
+5. U5-05c: aplikasi ntfy di ponsel yang berlangganan topik alert.
 6. U6-01 (opsional): hanya bila simulasi insiden diulang di jendela pemeliharaan.

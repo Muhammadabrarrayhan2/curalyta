@@ -51,7 +51,7 @@ Target publik diatur lewat `file_sd` (`prometheus/targets/*.yml`), sehingga URL 
 
 Aturan routing: dikelompokkan per `alertname` + `instance`; critical dikirim setelah 10 detik dan diulang tiap 1 jam, lainnya setelah 30 detik dan diulang tiap 3 jam; notifikasi *resolved* ikut dikirim. Inhibit: saat `LayananTidakTersedia` aktif, `WaktuResponsLambat` untuk endpoint yang sama diredam.
 
-Saluran notifikasi. ntfy.sh menolak penerusan email dari pengirim anonim (error 40053, ditemukan saat uji). Alert dikirim sebagai push notification; email ke `abrarrayhan8@gmail.com` aktif otomatis bila token akun ntfy gratis (`NTFY_TOKEN`) diisi di `.env` VM 102 lalu `monitor-vm-setup.sh` dijalankan ulang.
+Saluran notifikasi. ntfy.sh menolak penerusan email dari pengirim anonim (error 40053, ditemukan saat uji). Karena itu dibuat akun ntfy gratis. Email `abrarrayhan8@gmail.com` diverifikasi di akun tersebut, lalu token aksesnya dipasang dengan `ops/lab/set-ntfy-token.sh`: token diketik tersembunyi, diperiksa ke ntfy.sh, dan disimpan di `.env` VM 102 (izin 600). Sejak 25 Oktober 2026 pukul 14:17 WIB alert dikirim sebagai push notification dan email, dibuktikan dengan email uji yang diterima (`docs/screenshot/U5-05b-ntfy-email-alert.png`). Kuota akun gratis 5 email per hari, sehingga push tetap menjadi saluran utama.
 
 ## 4. Cara membaca dashboard Grafana
 
