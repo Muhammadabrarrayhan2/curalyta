@@ -6,6 +6,8 @@ Repositori ini juga menjadi portofolio sertifikasi BNSP skema Insinyur Cloud Com
 
 Approved by Dr. Muammar Riyandi
 
+Status lab: dimatikan dengan aman pada 25 Oktober 2026 pukul 16:55 WIB setelah seluruh tahap selesai. Sebelum dimatikan, backup database terakhir dibuat (`s3://curalyta-db-backups/postgres/curalyta-20261025T095336Z.dump`) dan laporan SLA penutup disimpan di [docs/bukti/laporan-sla-penutupan-2026-10-25.md](docs/bukti/laporan-sla-penutupan-2026-10-25.md). Selama lab mati, URL quick tunnel dan staging Vercel (yang meneruskan `/api` ke tunnel) tidak dapat diakses. Cara menyalakan kembali ada di [docs/SOP_OPERASIONAL.md](docs/SOP_OPERASIONAL.md) bagian 1; setelah menyala, jalankan `ops/lab/update-public-url.sh` karena URL tunnel akan berubah.
+
 ## Fitur
 
 | Peran | Fitur |
