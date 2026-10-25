@@ -75,9 +75,9 @@ Waktu mengikuti jam VM/host yang tersinkron NTP (WIB). Bukti lengkap di `docs/bu
 |---|---|---|---|---|
 | 07:24–08:10 | IaaS | Patching host Proxmox (`apt dist-upgrade`, kernel 7.0.14-25-pve), reboot pasca-patch | Berhasil; 0 paket tertunda | `tahap3-provision-proxmox.log`, `tahap4-patching-os.log` |
 | 08:10–08:15 | IaaS | Provisioning VM 101/102 dari template, firewall per VM, disk backup, jadwal vzdump | Berhasil | `tahap3-provision-proxmox.log` |
-| 09:31–09:40 | IaaS | Setup stack monitoring + object storage; setup VM aplikasi | Berhasil (setelah perbaikan safe.directory, penggantian MinIO → Garage) | commit `ec8db3f`, `c031cde`, `9e0190c` |
+| 09:31–09:40 | IaaS | Setup stack monitoring + object storage; setup VM aplikasi | Berhasil (setelah perbaikan safe.directory, penggantian MinIO → Garage) | commit `15596c8`, `a3c8af4`, `4953946` |
 | 09:43 | SaaS | Registrasi runner self-hosted GitHub Actions | Online, label `curalyta-lab` | `tahap4-5-cicd-deploy-staging.log` |
-| 09:46–10:07 | SaaS + IaaS | Deploy lewat CI/CD (5 run); 2 bug deploy ditemukan dan diperbaiki | Run `2d065e1`, `fd94864`: test, build, deploy sukses | `tahap4-5-cicd-deploy-staging.log` |
+| 09:46–10:07 | SaaS + IaaS | Deploy lewat CI/CD (5 run); 2 bug deploy ditemukan dan diperbaiki | Run `eb4986b`, `f87b2d3`: test, build, deploy sukses | `tahap4-5-cicd-deploy-staging.log` |
 | 09:59 | PaaS | Deploy staging Vercel dengan rewrite `/api` ke produksi | `/api/health` HTTP 200 | `tahap4-5-cicd-deploy-staging.log` |
 | 10:06 | IaaS | Backup database manual + restore ke DB uji | Backup 37 s; restore 2 s; data identik | `tahap7-backup-restore.log` |
 | 10:09–10:15 | IaaS | vzdump VM 102 (20 GiB → 1,78 GB, 44 s), restore penuh ke VM ID baru 9102 dengan jaringan diputus, verifikasi isi, lalu hapus | Pulih dalam 327 s (target RTO 3.600 s) | `tahap7-vzdump-restore-vm.log` |

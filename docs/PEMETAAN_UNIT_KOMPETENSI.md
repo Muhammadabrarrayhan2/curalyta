@@ -76,9 +76,9 @@ Kendala dan kegagalan selama pelaksanaan dicatat apa adanya di log dan commit.
 ## Riwayat kerja (keaslian)
 
 `git log --oneline` menunjukkan seluruh tahapan, termasuk perbaikan atas temuan saat eksekusi nyata. Contohnya:
-- `c3bfa30` deploy memakai tag lama
-- `2d065e1` re-exec deploy
-- `c031cde` MinIO diganti Garage
-- `0423955` ntfy menolak email anonim
-- `ed8af70` jam host setelah laptop tidur
-- `352af86` watchdog tunnel
+- `486aca5` deploy memakai tag lama
+- `eb4986b` re-exec deploy
+- `a3c8af4` MinIO diganti Garage
+- `1f769df` ntfy menolak email anonim
+- `5bb40dc` jam host setelah laptop tidur
+- `4df1735` watchdog tunnel

@@ -90,11 +90,11 @@ Kendala yang ditemukan oleh run nyata dan sudah diperbaiki:
 
 | Run | Masalah | Perbaikan (commit) |
 |---|---|---|
-| 506b97d | Test lama memakai path Windows `D:` | Test netral platform (`4c22f21`) |
-| 137c960 | Runner tidak bisa menulis log; `deploy.sh` memakai tag lama karena nilai `.env` sudah ter-export | Izin `/var/log/curalyta`; export ulang tag (`c3bfa30`) |
-| c3bfa30 | `deploy.sh` menjalankan versi lama dirinya setelah `git reset` | Re-exec setelah update (`2d065e1`) |
+| 90cf3c7 | Test lama memakai path Windows `D:` | Test netral platform (`69eb1be`) |
+| 69f92cb | Runner tidak bisa menulis log; `deploy.sh` memakai tag lama karena nilai `.env` sudah ter-export | Izin `/var/log/curalyta`; export ulang tag (`486aca5`) |
+| 486aca5 | `deploy.sh` menjalankan versi lama dirinya setelah `git reset` | Re-exec setelah update (`eb4986b`) |
 
-Hasil: run `2d065e1`, `fd94864`, dan seterusnya sukses; container berjalan dengan image bertag commit yang di-deploy.
+Hasil: run `eb4986b`, `f87b2d3`, dan seterusnya sukses; container berjalan dengan image bertag commit yang di-deploy.
 
 ## 7. Akses publik dan staging (Tahap 4: PaaS)
 

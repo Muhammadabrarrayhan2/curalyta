@@ -70,9 +70,9 @@ Downtime tidak terencana yang setara: 2 menit 2 detik. Anggaran downtime bulanan
 
 | No | Temuan selama pelaksanaan | Tindakan | Status |
 |---|---|---|---|
-| 1 | ntfy.sh menolak email anonim; notifikasi pertama gagal (error 40053) | Alert dikirim sebagai push; email aktif setelah token akun ntfy dipasang (`ops/lab/set-ntfy-token.sh`, email uji diterima 25-10-2026 14:17 WIB) | Selesai (`0423955`, `d2d9109`) |
+| 1 | ntfy.sh menolak email anonim; notifikasi pertama gagal (error 40053) | Alert dikirim sebagai push; email aktif setelah token akun ntfy dipasang (`ops/lab/set-ntfy-token.sh`, email uji diterima 25-10-2026 14:17 WIB) | Selesai (`1f769df`, `eb6248c`) |
 | 2 | Deploy CI/CD otomatis bisa menyalakan ulang layanan di tengah penanganan insiden | Bekukan deploy (hentikan runner) selama insiden; dicatat di SOP | Selesai (dijalankan pada simulasi ini) |
-| 3 | Laptop host tidur di tengah percobaan pertama sehingga timeline tidak valid | Matikan sleep saat terhubung daya; chrony `makestep 1 -1` | Selesai (`ed8af70`) |
+| 3 | Laptop host tidur di tengah percobaan pertama sehingga timeline tidak valid | Matikan sleep saat terhubung daya; chrony `makestep 1 -1` | Selesai (`5bb40dc`) |
 | 4 | Deteksi butuh 103 s | Dapat dipercepat menjadi ±45 s dengan probe 15 s dan `for: 30s`, dengan risiko alert palsu lebih tinggi | Dipertimbangkan |
 | 5 | Pemulihan masih manual | Docker `restart: unless-stopped` sudah menangani crash; untuk container yang dihentikan, healthcheck eksternal + restart otomatis dapat ditambahkan | Dipertimbangkan |
 
@@ -97,10 +97,10 @@ Ringkasan. Laptop host tidur ±1 jam (10:36–11:32 WIB). Quick tunnel Cloudflar
 
 Diagnosis. `systemctl is-active curalyta-tunnel` = active, tetapi log berisi "Tunnel not found"; publik HTTP 000; internal HTTP 200.
 
-Pemulihan. `sudo systemctl restart curalyta-tunnel` menghasilkan URL baru `https://produces-solving-teddy-itself.trycloudflare.com`. Lalu `ops/lab/update-public-url.sh` memperbarui CORS, target Prometheus, dan rewrite Vercel (commit `d9d8766`). Verifikasi: publik dan staging HTTP 200.
+Pemulihan. `sudo systemctl restart curalyta-tunnel` menghasilkan URL baru `https://produces-solving-teddy-itself.trycloudflare.com`. Lalu `ops/lab/update-public-url.sh` memperbarui CORS, target Prometheus, dan rewrite Vercel (commit `b40d27d`). Verifikasi: publik dan staging HTTP 200.
 
 Pencegahan.
-1. `ops/lab/tunnel-watchdog.sh` (timer 2 menit) me-restart tunnel otomatis bila muncul "Tunnel not found" (`352af86`).
+1. `ops/lab/tunnel-watchdog.sh` (timer 2 menit) me-restart tunnel otomatis bila muncul "Tunnel not found" (`4df1735`).
 2. Matikan sleep laptop saat terhubung daya.
 3. Jangka panjang: named tunnel Cloudflare dengan domain sendiri agar URL tetap.
 4. Tambahkan uptime check eksternal (lihat `PEMANTAUAN.md` 5.2).
@@ -125,7 +125,7 @@ Kronologi (dari `vmware.log` di host dan log VM):
 | 16:10 | `cloudflared` meminta quick tunnel baru: `https://flashing-followed-montgomery-ccd.trycloudflare.com` |
 | 16:11 / 16:14 | Alert P1 dan P2 untuk URL lama dikirim ke ntfy (push dan email) |
 | 16:21 | Diagnosis: internal `/health` HTTP 200, URL lama HTTP 000, URL baru HTTP 200 |
-| 16:22 | `ops/lab/update-public-url.sh` memperbarui CORS, target Prometheus, dan rewrite Vercel (commit `6e7487a`) |
+| 16:22 | `ops/lab/update-public-url.sh` memperbarui CORS, target Prometheus, dan rewrite Vercel (commit `dbaffcb`) |
 | 16:23–16:24 | Alert resolved, semua probe UP |
 
 Akar masalah. Laptop host masuk mode tidur saat lab berjalan. Setelah resume, hypervisor bersarang (Proxmox/KVM di dalam VMware) tidak dapat melanjutkan eksekusi dan di-reset. Reboot memicu masalah kedua: quick tunnel Cloudflare selalu memberi URL baru, sementara pemantauan dan staging masih mengarah ke URL lama. Tekanan memori host ikut memperburuk kondisi (RAM terpakai 95%, committed 32,4/33,4 GB, pagefile 17,7 GB, C: hampir penuh; lihat `docs/screenshot/U3-01-task-manager.png`).
