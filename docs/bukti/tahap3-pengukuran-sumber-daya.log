@@ -1,0 +1,80 @@
+# Pengukuran pemakaian sumber daya (Prometheus + docker stats) untuk analisis kebutuhan perangkat keras
+# Diambil: 2026-10-25 11:36:04 +0700 (jam VM). Rentang: 3 jam terakhir (mencakup uji beban 10–200 VU)
+
+## vCPU dan RAM terpasang
+  curalyta-app       2.0
+  curalyta-monitor   2.0
+  pve                6.0
+  (RAM GiB)
+  curalyta-app       1.92
+  curalyta-monitor   1.18
+  pve                4.31
+
+## CPU % rata-rata 3 jam
+  curalyta-app       17.86
+  curalyta-monitor   11.15
+  pve                19.28
+## CPU % puncak (rata-rata 2 menit) 3 jam
+  curalyta-app       73.23
+  curalyta-monitor   77.69
+  pve                81.44
+
+## Memori terpakai % rata-rata / puncak 3 jam
+  curalyta-app       31.31
+  curalyta-monitor   49.12
+  pve                81.07
+  --
+  curalyta-app       37.66
+  curalyta-monitor   55.36
+  pve                96.44
+
+## Disk root terpakai GiB / %
+  curalyta-app       4.44
+  curalyta-monitor   3.99
+  pve                6.89
+  --
+  curalyta-app       18.47
+  curalyta-monitor   20.78
+  pve                23.12
+
+## Jaringan puncak (Mbit/s, rata-rata 2 menit) rx / tx 3 jam
+  pve                0.02
+  curalyta-app       15.15
+  curalyta-monitor   16.65
+  --
+  curalyta-monitor   1.99
+  pve                0.03
+  curalyta-app       16.58
+
+## Memori per container (MiB, working set) saat ini / puncak 3 jam (cAdvisor)
+  --
+
+## docker stats (VM curalyta-app, sesaat)
+curalyta-backend-1	0.01%	27.86MiB / 1.918GiB	11.8kB / 15.3kB	6.99MB / 8.19kB
+curalyta-frontend-1	0.00%	3.117MiB / 1.918GiB	2.37kB / 3.45kB	1.28MB / 12.3kB
+curalyta-nginx-1	0.02%	6.145MiB / 1.918GiB	725MB / 810MB	3.66MB / 16.4kB
+curalyta-postgres-1	0.00%	52.21MiB / 1.918GiB	24.3MB / 25.6MB	930kB / 106MB
+curalyta-agents-cadvisor-1	0.00%	18.82MiB / 1.918GiB	148kB / 1.63MB	10.3MB / 0B
+
+  TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+  Images          16        15        1.131GB   109.6MB (9%)
+  Containers      5         5         278.5kB   0B (0%)
+  Local Volumes   2         2         75.09MB   0B (0%)
+  Build Cache     0         0         0B        0B
+
+## Host Proxmox
+                 total        used        free      shared  buff/cache   available
+  Mem:           4.3Gi       3.6Gi       497Mi        13Mi       464Mi       715Mi
+  Swap:          5.8Gi       1.7Gi       4.1Gi
+    base-9000-disk-0   <2.20g       
+    data               31.41g 28.16 
+    root              <30.43g       
+    swap                5.78g       
+    vm-101-cloudinit    4.00m 9.38  
+    vm-101-disk-0      25.00g 20.92 
+    vm-102-cloudinit    4.00m 9.38  
+    vm-102-disk-0      20.00g 23.18 
+    vm-9000-cloudinit   4.00m       
+  Filesystem            Size  Used Avail Use% Mounted on
+  /dev/mapper/pve-root   30G  5.4G   23G  19% /
+  /dev/nvme0n1           30G  2.1G   26G   8% /mnt/backup-disk

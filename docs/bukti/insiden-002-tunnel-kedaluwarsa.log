@@ -1,0 +1,44 @@
+# INC-002 (insiden nyata) — jalur publik HTTPS mati setelah laptop host sleep
+# Waktu = jam VM curalyta-app (NTP, WIB)
+
+## Deteksi (Prometheus/Alertmanager)
+   LayananTidakTersedia P1 https://decisions-levitra-clause-immune.trycloudflare.com/health firing activeAt 2026-10-25T04:34:29.263191415Z
+   WaktuResponsLambat P2 https://decisions-levitra-clause-immune.trycloudflare.com/health pending activeAt 2026-10-25T04:34:29.263191415Z
+   HalamanWebGagal P2 https://decisions-levitra-clause-immune.trycloudflare.com/ pending activeAt 2026-10-25T04:34:44.263191415Z
+
+## Diagnosis
+[2026-10-25 11:37:05 +0700] systemctl is-active curalyta-tunnel: active
+  jalur internal: HTTP 200
+  log cloudflared:
+    2026-10-25T03:33:45Z ERR Register tunnel error from server side error="Unauthorized: Tunnel not found" connIndex=0 event=0 ip=198.41.192.77
+    2026-10-25T04:36:52Z ERR Register tunnel error from server side error="Unauthorized: Tunnel not found" connIndex=0 event=0 ip=198.41.200.63
+  publik: HTTP 000 (000 = tidak ada respons)
+  Akar masalah: quick tunnel Cloudflare bersifat sementara; saat laptop host tidur ±1 jam koneksi
+  terputus dan Cloudflare menghapus tunnel. cloudflared terus mencoba ID lama (proses tidak keluar,
+  sehingga Restart=always tidak memicu). Layanan inti tetap sehat di jalur internal.
+
+## Pemulihan
+[2026-10-25 11:37:17 +0700] sudo systemctl restart curalyta-tunnel
+[2026-10-25 11:37:33 +0700] URL publik baru: https://produces-solving-teddy-itself.trycloudflare.com
+  publik /health: HTTP 530
+
+## Sinkronisasi URL baru (ops/lab/update-public-url.sh: CORS, target Prometheus, rewrite Vercel)
+  URL publik: https://produces-solving-teddy-itself.trycloudflare.com
+  CORS_ORIGIN=http://192.168.45.20,https://produces-solving-teddy-itself.trycloudflare.com,https://curalyta-frontend.vercel.app,https://curalyta-frontend-hxd7.vercel.app
+  Target Prometheus diperbarui
+  warning: in the working copy of 'frontend/vercel.json', LF will be replaced by CRLF the next time Git touches it
+  frontend/vercel.json di-commit dan di-push (Vercel + CI/CD berjalan)
+
+## Verifikasi pemulihan
+[2026-10-25 11:39:25 +0700] publik /health: HTTP 200; staging Vercel /api/health: HTTP 200
+  Deployment Vercel untuk rewrite baru: commit d9d8766 (success)
+
+## Dampak terhadap SLA
+  Jalur internal /health (indikator SLA) tetap sehat selama insiden ini; yang terdampak hanya
+  akses publik HTTPS. Gangguan publik ±10:33–11:38 WIB (log cloudflared pertama 'Tunnel not found'
+  03:33:45Z) dan bertepatan dengan laptop host tidur.
+
+## Tindakan pencegahan
+  1. Laptop host: matikan sleep saat terhubung charger (Settings → Power).
+  2. Watchdog tunnel: restart otomatis bila log menunjukkan 'Tunnel not found' (ops/lab/tunnel-watchdog.sh).
+  3. Jangka panjang: named tunnel Cloudflare dengan domain sendiri agar URL tetap.

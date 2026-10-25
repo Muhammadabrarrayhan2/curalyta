@@ -142,4 +142,27 @@ done
 echo "${url:-}" > "$APP_DIR/.public-url"
 echo "URL publik: ${url:-belum tersedia}"
 
+# Watchdog: restart tunnel yang kedaluwarsa ("Tunnel not found") setiap 2 menit
+cat > /etc/systemd/system/curalyta-tunnel-watchdog.service <<'EOF'
+[Unit]
+Description=Curalyta tunnel watchdog
+
+[Service]
+Type=oneshot
+ExecStart=/opt/curalyta/ops/lab/tunnel-watchdog.sh
+EOF
+cat > /etc/systemd/system/curalyta-tunnel-watchdog.timer <<'EOF'
+[Unit]
+Description=Jalankan Curalyta tunnel watchdog setiap 2 menit
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now curalyta-tunnel-watchdog.timer
+
 "$APP_DIR/ops/healthcheck.sh" "http://localhost/health" || true
