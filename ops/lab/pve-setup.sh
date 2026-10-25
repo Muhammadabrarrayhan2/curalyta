@@ -79,7 +79,16 @@ EOF
 fi
 export DEBIAN_FRONTEND=noninteractive
 # Jam harus benar sebelum apt: tanda tangan repositori ditolak bila jam mundur
-# (VMware memberi jam lokal Windows; chrony mengoreksinya ke NTP)
+# (VMware memberi jam lokal Windows; chrony mengoreksinya ke NTP).
+# Laptop host bisa sleep dan membekukan VM, jadi chrony selalu boleh
+# melompatkan jam (bukan hanya saat boot) bila selisih > 1 detik.
+mkdir -p /etc/chrony/conf.d
+if [ ! -f /etc/chrony/conf.d/curalyta.conf ]; then
+  printf '# Lab di laptop bisa tidur: lompatkan jam bila selisih > 1 detik\nmakestep 1 -1\n' \
+    > /etc/chrony/conf.d/curalyta.conf
+  systemctl restart chrony
+  sleep 5
+fi
 chronyc -a makestep >/dev/null 2>&1 || true
 hwclock --systohc || true
 apt-get update -qq
