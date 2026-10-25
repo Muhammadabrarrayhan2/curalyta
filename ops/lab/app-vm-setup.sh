@@ -68,13 +68,17 @@ fi
 chown curalyta:curalyta "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
 
-step "4. Build dan jalankan stack aplikasi"
+step "4. Stack aplikasi"
 cd "$APP_DIR"
-if ! docker image inspect curalyta-backend:local >/dev/null 2>&1; then
+# Normalnya image diambil dari GHCR oleh job deploy CI/CD (ops/deploy.sh).
+# BUILD_LOCAL=1 membangun image langsung di VM (misalnya saat CI tidak tersedia).
+if [ "${BUILD_LOCAL:-0}" = "1" ]; then
   docker compose build
+  docker compose up -d --wait --wait-timeout 300
+  docker compose ps
+else
+  echo "Lewati build lokal: deploy pertama dilakukan pipeline CI/CD (runner self-hosted)"
 fi
-docker compose up -d --wait --wait-timeout 300
-docker compose ps
 
 step "5. cAdvisor"
 docker compose -f "$LAB_DIR/app-agents.yml" -p curalyta-agents up -d
