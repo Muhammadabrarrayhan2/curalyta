@@ -4,7 +4,7 @@ Screenshot melengkapi log bukti di `docs/bukti/` dan disimpan di `docs/screensho
 
 ## Cara pengambilan
 
-Sebanyak 38 screenshot diambil pada 25 Oktober 2026 pukul 12:33–13:13 WIB dengan browser Microsoft Edge headless (Playwright) dari laptop admin:
+Sebanyak 38 screenshot pertama diambil pada 25 Oktober 2026 pukul 12:33–13:13 WIB dengan browser Microsoft Edge headless (Playwright) dari laptop admin:
 
 - Halaman web dibuka langsung dari server lab, GitHub, dan URL publik. Bilah alamat dan jam di bagian atas gambar adalah bingkai yang ditambahkan saat pengambilan. Jamnya diambil dari jam VM lab yang tersinkron NTP, bukan dari jam laptop.
 - Gambar terminal berisi keluaran asli dari perintah yang dijalankan lewat SSH pada saat itu, lalu ditampilkan dalam bingkai terminal.
@@ -33,7 +33,7 @@ Status: "Ada" berarti berkas sudah ada di `docs/screenshot/`. "Manual" berarti h
 
 | No | Berkas | Isi | Status |
 |---|---|---|---|
-| U2-01 | `U2-01-vmware-curalyta-pve.png` | VMware Workstation dengan VM `curalyta-pve` berjalan | Manual |
+| U2-01 | `U2-01-vmware-curalyta-pve.png` | VMware Workstation dengan VM `curalyta-pve` berjalan (konsol Proxmox, https://192.168.45.10:8006) | Ada |
 | U2-02 | `U2-02-proxmox-nested-kvm.png` | `pveversion`, `/dev/kvm`, `lscpu` (VT-x), `qm list` | Ada |
 | U2-03a | `U2-03a-proxmox-firewall-vm101-options.png` | Firewall VM 101 aktif, Input Policy DROP | Ada |
 | U2-03b | `U2-03b-proxmox-firewall-vm101.png` | Aturan yang diizinkan: 80, 443, SSH dari laptop, 9100/8080 dari VM monitoring, ICMP | Ada |
@@ -47,7 +47,7 @@ Status: "Ada" berarti berkas sudah ada di `docs/screenshot/`. "Manual" berarti h
 
 | No | Berkas | Isi | Status |
 |---|---|---|---|
-| U3-01 | `U3-01-task-manager.png` | Task Manager Windows → Performance (CPU, Memory, Disk host fisik) | Manual |
+| U3-01 | `U3-01-task-manager.png` | Task Manager → Performance: RAM 16 GB DDR4 terpakai 95%, committed 32,4/33,4 GB, CPU 3,84 GHz, SSD NVMe, GPU Intel UHD + NVIDIA. Memori host adalah sumber daya paling kritis | Ada |
 | U3-02 | `U3-02-proxmox-node-summary.png` | Node `pve`: 6 vCPU i7-12700H, RAM 4,31 GiB, disk, kernel 7.0.14-25-pve | Ada |
 | U3-03 | `U3-03-proxmox-vm101-hardware.png` | Hardware VM 101: 2 GiB RAM, 2 core (host), disk 25 GB | Ada |
 | U3-04 | `U3-04-grafana-sumber-daya-6-jam.png` | CPU, memori, disk, jaringan VM dan per container selama 6 jam | Ada |
@@ -61,8 +61,8 @@ Status: "Ada" berarti berkas sudah ada di `docs/screenshot/`. "Manual" berarti h
 | U4-02 | `U4-02-proxmox-riwayat-task.png` | Riwayat task: backup, restore VM 9102, snapshot, rollback | Ada |
 | U4-03 | `U4-03-github-actions-cicd.png` | Daftar run workflow CI/CD | Ada |
 | U4-03b | `U4-03b-github-actions-run-detail.png` | Satu run sukses: Test → Build & push → Deploy ke lab | Ada |
-| U4-04 | `U4-04-github-runner.png` | GitHub → Settings → Actions → Runners: runner `curalyta-app` online | Manual |
-| U4-05 | `U4-05-github-secrets.png` | GitHub → Settings → Secrets and variables → Actions (nilai tersembunyi) | Manual |
+| U4-04 | `U4-04-github-runner.png` | Runner self-hosted `curalyta-app` (Linux, X64, label `curalyta-lab`) status Idle (online, siap menerima job) | Ada |
+| U4-05 | `U4-05-github-secrets.png` | Halaman Actions secrets: repo tidak menyimpan secret. CI/CD hanya memakai `GITHUB_TOKEN` bawaan (izin `packages: write` untuk GHCR), sedangkan secret aplikasi disimpan di `.env` VM dengan izin 600, tidak di GitHub | Ada |
 | U4-06 | `U4-06-vercel-deployment-detail.png` | Detail satu deployment Production: status Ready (Stale, sudah digantikan deployment lebih baru), durasi build 32 s. Deployment lama tetap tersimpan dan bisa di-promote kembali sebagai rollback | Ada (pemilik akun) |
 | U4-07 | `U4-07-patching-os.png` | `apt list --upgradable` kosong, unattended-upgrades aktif, riwayat apt | Ada |
 | U4-08 | `U4-08-log-backup-harian.png` | Cron 02:00, log backup ke `s3://curalyta-db-backups`, file dump + sha256 | Ada |
@@ -103,14 +103,8 @@ Catatan U5-04: Alertmanager hanya menampilkan alert yang sedang aktif, dan saat 
 | A-04 | `A-04-produksi-health-json.png` | `/health`: status ok, database up, latensi | Ada |
 | A-05 | `A-05-staging-vercel.png` | Staging Vercel berjalan | Ada |
 
-## Yang perlu diambil manual
+## Catatan pengambilan
 
-Simpan dengan nama berkas pada tabel di atas. Pastikan jam taskbar terlihat.
+U1-04, U4-06, U5-05b, dan U5-05c diambil oleh pemilik akun (dashboard Vercel, Gmail, dan ponsel). U2-01, U3-01, U4-04, dan U4-05 adalah tangkapan layar penuh desktop laptop admin pada 25 Oktober 2026 pukul 16:34–16:50 WIB, sehingga jam taskbar ikut terlihat.
 
-U1-04 dan U4-06 diambil oleh pemilik akun dari dashboard Vercel. Jam pada bingkainya adalah waktu berkas disimpan, dikonversi ke jam lab.
-
-1. U2-01: jendela VMware Workstation saat `curalyta-pve` berjalan.
-2. U3-01: Task Manager (Ctrl+Shift+Esc) → Performance.
-3. U4-04: github.com/Muhammadabrarrayhan2/curalyta → Settings → Actions → Runners.
-4. U4-05: Settings → Secrets and variables → Actions.
-5. U6-01 (opsional): hanya bila simulasi insiden diulang di jendela pemeliharaan.
+Satu-satunya yang belum ada adalah U6-01 (opsional): tampilan browser saat aplikasi gagal. Bukti ini hanya bisa diambil bila simulasi insiden diulang di jendela pemeliharaan. Dampak ke pengguna sudah tercatat di `docs/bukti/tahap7-simulasi-insiden.log`.

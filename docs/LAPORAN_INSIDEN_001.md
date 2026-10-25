@@ -105,20 +105,35 @@ Pencegahan.
 3. Jangka panjang: named tunnel Cloudflare dengan domain sendiri agar URL tetap.
 4. Tambahkan uptime check eksternal (lihat `PEMANTAUAN.md` 5.2).
 
-## Lampiran B: INC-003 URL publik berubah setelah lab reboot (nyata, 25 Oktober 2026)
+## Lampiran B: INC-003 Laptop host tidur, Proxmox crash saat resume, URL publik berubah (nyata, 25 Oktober 2026)
 
 | Atribut | Nilai |
 |---|---|
-| Prioritas | P1 (jalur publik tidak dapat diakses; jalur internal sehat) |
-| Mulai | ±16:08 WIB, host Proxmox dan kedua VM menyala ulang (`uptime -s` pve 16:08:46, curalyta-app 16:09:21) |
-| Terdeteksi | Alert `LayananTidakTersedia` (P1) 16:11 WIB dan `HalamanWebGagal` (P2) 16:14 WIB, diterima di aplikasi ntfy ponsel |
+| Prioritas | P1 (seluruh layanan tidak tersedia, lalu jalur publik tidak dapat diakses) |
+| Mulai | 15:01:49 WIB, laptop host masuk mode tidur (sleep). VMware mem-pause VM `curalyta-pve` |
+| Terdeteksi | 16:11 WIB alert `LayananTidakTersedia` (P1) dan 16:14 WIB `HalamanWebGagal` (P2), diterima di aplikasi ntfy ponsel |
 | Pulih | 16:23 WIB alert resolved; semua probe (produksi dan staging) UP 16:24 WIB |
-| Durasi dampak | ±15 menit |
+| Durasi dampak | ±82 menit (15:02–16:24 WIB). Selama laptop tidur monitoring ikut berhenti, sehingga alert baru muncul setelah lab hidup kembali |
 
-Ringkasan. Seluruh lab menyala ulang (laptop host/VMware dimulai ulang). Aplikasi, database, dan monitoring kembali normal secara otomatis (`onboot=1`, `restart: unless-stopped`). Service `curalyta-tunnel` juga aktif kembali, tetapi quick tunnel Cloudflare selalu memberi URL baru (`https://flashing-followed-montgomery-ccd.trycloudflare.com`). Uptime check, CORS, dan rewrite Vercel masih mengarah ke URL lama, sehingga jalur publik dianggap mati.
+Kronologi (dari `vmware.log` di host dan log VM):
 
-Diagnosis. Internal `/health` HTTP 200; URL lama HTTP 000; log `cloudflared` sejak boot menunjukkan URL baru dan koneksi terdaftar; URL baru HTTP 200.
+| Waktu (WIB) | Kejadian |
+|---|---|
+| 15:01:49 | `PowerNotify: System suspend detected`, VM di-pause |
+| 16:10:50 | `System resume detected`. Sesaat setelahnya guest Proxmox menghentikan CPU (`The CPU has been disabled by the guest operating system`) lalu meminta hard reset (`The guest has requested that the virtual machine be hard reset`) |
+| 16:08–16:09 (jam guest) | Proxmox, VM 101, dan VM 102 boot ulang otomatis (`onboot=1`). Jam guest masih tertinggal beberapa menit sebelum chrony menyesuaikan |
+| 16:10 | `cloudflared` meminta quick tunnel baru: `https://flashing-followed-montgomery-ccd.trycloudflare.com` |
+| 16:11 / 16:14 | Alert P1 dan P2 untuk URL lama dikirim ke ntfy (push dan email) |
+| 16:21 | Diagnosis: internal `/health` HTTP 200, URL lama HTTP 000, URL baru HTTP 200 |
+| 16:22 | `ops/lab/update-public-url.sh` memperbarui CORS, target Prometheus, dan rewrite Vercel (commit `6e7487a`) |
+| 16:23–16:24 | Alert resolved, semua probe UP |
 
-Pemulihan. `ops/lab/update-public-url.sh` dari laptop admin memperbarui CORS, target Prometheus, dan rewrite Vercel (commit `6e7487a`). Alert resolved otomatis, lalu probe staging Vercel kembali UP setelah deployment Vercel selesai.
+Akar masalah. Laptop host masuk mode tidur saat lab berjalan. Setelah resume, hypervisor bersarang (Proxmox/KVM di dalam VMware) tidak dapat melanjutkan eksekusi dan di-reset. Reboot memicu masalah kedua: quick tunnel Cloudflare selalu memberi URL baru, sementara pemantauan dan staging masih mengarah ke URL lama. Tekanan memori host ikut memperburuk kondisi (RAM terpakai 95%, committed 32,4/33,4 GB, pagefile 17,7 GB, C: hampir penuh; lihat `docs/screenshot/U3-01-task-manager.png`).
 
-Pencegahan. Watchdog hanya menangani tunnel kedaluwarsa, tidak menangani URL baru setelah reboot. Solusi permanennya sama dengan INC-002: named tunnel dengan domain tetap, sehingga reboot tidak mengubah alamat publik.
+Pemulihan. Layanan aplikasi pulih otomatis setelah reboot. Jalur publik dipulihkan dengan `ops/lab/update-public-url.sh`.
+
+Pencegahan.
+1. Matikan sleep saat laptop terhubung daya (Settings → System → Power → Screen and sleep → "Never" saat plugged in). Ini juga tindak lanjut INC-002 yang belum dijalankan.
+2. Named tunnel Cloudflare dengan domain tetap, agar reboot tidak mengubah alamat publik.
+3. Uptime check eksternal, agar matinya seluruh host tetap terdeteksi saat monitoring internal ikut mati.
+4. Kurangi beban memori host (tutup aplikasi lain saat lab berjalan) dan kosongkan ruang C:.
