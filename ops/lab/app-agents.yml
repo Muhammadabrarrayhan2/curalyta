@@ -1,9 +1,10 @@
 # Agen monitoring di VM aplikasi (terpisah dari stack aplikasi):
 #   cAdvisor — metrik CPU/memori/jaringan per container (setara docker stats)
+#   v0.55.1 ke atas wajib: v0.52 tidak mengenali image store containerd Docker 29
 #   untuk di-scrape oleh Prometheus di VM monitoring (:8080, dibatasi firewall)
 services:
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
     restart: unless-stopped
     privileged: true
     devices: [/dev/kmsg]
