@@ -48,6 +48,9 @@ set_env() {
   else
     echo "$1=$2" >> .env
   fi
+  # load_env sudah meng-export nilai lama; Compose memakai environment shell
+  # di atas isi .env, jadi nilai baru juga harus di-export
+  export "$1=$2"
 }
 set_env BACKEND_IMAGE "${REGISTRY}/backend:${TAG}"
 set_env FRONTEND_IMAGE "${REGISTRY}/frontend:${TAG}"

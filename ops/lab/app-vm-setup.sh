@@ -85,6 +85,8 @@ docker compose -f "$LAB_DIR/app-agents.yml" -p curalyta-agents up -d
 
 step "6. Cron backup harian dan logrotate"
 mkdir -p /var/backups/curalyta /var/log/curalyta
+# Runner CI/CD (user curalyta) menulis log deploy ke sini
+chown curalyta:curalyta /var/log/curalyta
 cat > /etc/cron.d/curalyta-backup <<'EOF'
 # Backup database Curalyta setiap hari pukul 02:00 WIB (RPO 24 jam)
 SHELL=/bin/bash
