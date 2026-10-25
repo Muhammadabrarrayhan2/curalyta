@@ -11,7 +11,11 @@
 #   3. Template VM Ubuntu Server 22.04 LTS (cloud image + cloud-init)
 #   4. VM 101 curalyta-app dan VM 102 curalyta-monitor dengan IP statis
 #   5. Firewall Proxmox per VM (setara firewall VPC di public cloud)
-#   6. Jadwal backup vzdump harian, retensi 7 hari
+#   6. Disk backup terpisah (storage backup-disk) + jadwal vzdump harian
+#
+# Kapasitas: SSD laptop hanya menyisakan ~20 GB, sehingga VM dibuat sebagai
+# linked clone dari template dan retensi vzdump dibatasi 2 arsip per VM
+# (analisis di docs/KEBUTUHAN_PERANGKAT_KERAS.md).
 #
 # Topologi (VMware NAT vmnet8 192.168.45.0/24, gateway .2):
 #   pve 192.168.45.10 | curalyta-app .20 | curalyta-monitor .30 | laptop .1
@@ -33,6 +37,22 @@ IMG_URL="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd
 IMG_PATH="/var/lib/vz/template/iso/jammy-server-cloudimg-amd64.img"
 SNIPPET="/var/lib/vz/snippets/curalyta-vendor.yaml"
 SSH_KEYS="/root/.ssh/authorized_keys"   # kunci yang sama dipakai untuk VM
+BACKUP_STORAGE="backup-disk"
+BACKUP_MOUNT="/mnt/backup-disk"
+# Disk backup dikenali dari label filesystem-nya; bila belum diformat, dipilih
+# disk yang benar-benar kosong (tanpa partisi, tanpa filesystem, bukan PV LVM).
+# Nama perangkat (nvme0n1/nvme0n2) bisa tertukar antar boot, jadi tidak dipakai.
+find_backup_dev() {
+  local dev
+  dev=$(blkid -L curalyta-backup 2>/dev/null || true)
+  if [ -n "$dev" ]; then echo "$dev"; return; fi
+  for dev in $(lsblk -dnpo NAME,TYPE | awk '$2 == "disk" {print $1}'); do
+    [ "$(lsblk -nro NAME "$dev" | wc -l)" -eq 1 ] || continue   # punya partisi
+    blkid "$dev" >/dev/null 2>&1 && continue                   # punya filesystem/PV
+    pvs "$dev" >/dev/null 2>&1 && continue                     # anggota LVM
+    echo "$dev"; return
+  done
+}
 TZ_NAME="Asia/Jakarta"
 
 step() { printf '\n==== %s ====\n' "$*"; }
@@ -57,8 +77,14 @@ Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
 EOF
 fi
 export DEBIAN_FRONTEND=noninteractive
+# Jam harus benar sebelum apt: tanda tangan repositori ditolak bila jam mundur
+# (VMware memberi jam lokal Windows; chrony mengoreksinya ke NTP)
+chronyc -a makestep >/dev/null 2>&1 || true
+hwclock --systohc || true
 apt-get update -qq
 apt-get -y -qq dist-upgrade
+apt-get -y -qq autoremove
+apt-get clean
 timedatectl set-timezone "$TZ_NAME"
 pveversion
 
@@ -104,6 +130,21 @@ runcmd:
   - systemctl enable --now prometheus-node-exporter
 EOF
 
+# Template yang pembuatannya terputus (masih terkunci / belum jadi template)
+# dihapus dulu agar bisa dibuat ulang dengan bersih
+if qm status "$TEMPLATE_ID" >/dev/null 2>&1 && ! qm config "$TEMPLATE_ID" | grep -q '^template: 1'; then
+  echo "Template ${TEMPLATE_ID} tidak lengkap, dibuat ulang"
+  qm unlock "$TEMPLATE_ID" || true
+  qm destroy "$TEMPLATE_ID" --purge
+fi
+# Volume sisa yang tidak tercatat di konfigurasi VM (pembuatan terputus)
+if ! qm status "$TEMPLATE_ID" >/dev/null 2>&1; then
+  for vol in $(pvesm list "$STORAGE" --vmid "$TEMPLATE_ID" 2>/dev/null | awk 'NR>1 {print $1}'); do
+    echo "Menghapus volume sisa $vol"
+    pvesm free "$vol"
+  done
+fi
+
 if ! qm status "$TEMPLATE_ID" >/dev/null 2>&1; then
   qm create "$TEMPLATE_ID" --name ubuntu-2204-template --ostype l26 \
     --memory 2048 --cores 2 --cpu host \
@@ -117,12 +158,15 @@ if ! qm status "$TEMPLATE_ID" >/dev/null 2>&1; then
     --cicustom "vendor=local:snippets/$(basename "$SNIPPET")"
   qm template "$TEMPLATE_ID"
 fi
+# Image sumber tidak diperlukan lagi setelah template terbentuk (hemat disk)
+if qm config "$TEMPLATE_ID" | grep -q '^template: 1'; then rm -f "$IMG_PATH"; fi
 
 # ---------- 4. VM aplikasi dan VM monitoring ----------
 make_vm() {
   local id="$1" name="$2" ip="$3" cores="$4" mem="$5" disk="$6"
   if ! qm status "$id" >/dev/null 2>&1; then
-    qm clone "$TEMPLATE_ID" "$id" --name "$name" --full
+    # Linked clone: berbagi disk dasar template, hanya perubahan yang disimpan
+    qm clone "$TEMPLATE_ID" "$id" --name "$name"
     qm set "$id" --cores "$cores" --memory "$mem" \
       --ipconfig0 "ip=${ip}/24,gw=${GATEWAY}" --onboot 1 \
       --tags curalyta
@@ -186,12 +230,30 @@ IN ACCEPT -p icmp -log nolog
 EOF
 pve-firewall compile >/dev/null && pve-firewall restart && pve-firewall status
 
-# ---------- 6. Jadwal backup vzdump ----------
-step "6. Jadwal backup vzdump harian (retensi 7)"
+# ---------- 6. Disk backup dan jadwal vzdump ----------
+step "6. Disk backup terpisah dan jadwal vzdump harian"
+BACKUP_DEV=$(find_backup_dev)
+if [ -n "$BACKUP_DEV" ] && [ -b "$BACKUP_DEV" ]; then
+  echo "Disk backup: $BACKUP_DEV ($(lsblk -dno SIZE "$BACKUP_DEV"))"
+  if ! blkid "$BACKUP_DEV" >/dev/null 2>&1; then
+    mkfs.ext4 -q -L curalyta-backup "$BACKUP_DEV"
+  fi
+  mkdir -p "$BACKUP_MOUNT"
+  grep -q "LABEL=curalyta-backup" /etc/fstab || \
+    echo "LABEL=curalyta-backup $BACKUP_MOUNT ext4 defaults,nofail 0 2" >> /etc/fstab
+  mountpoint -q "$BACKUP_MOUNT" || mount "$BACKUP_MOUNT"
+  pvesm status | grep -q "^$BACKUP_STORAGE " || \
+    pvesm add dir "$BACKUP_STORAGE" --path "$BACKUP_MOUNT" --content backup --is_mountpoint 1
+  target_storage="$BACKUP_STORAGE"
+else
+  echo "Disk backup $BACKUP_DEV tidak ada; backup disimpan di storage local"
+  target_storage="local"
+fi
+df -h "$BACKUP_MOUNT" 2>/dev/null || true
 if ! pvesh get /cluster/backup --output-format json | grep -q '"id":"curalyta-daily"'; then
   pvesh create /cluster/backup --id curalyta-daily --schedule '01:30' \
-    --vmid "${APP_ID},${MON_ID}" --storage local --mode snapshot \
-    --compress zstd --prune-backups keep-daily=7 --enabled 1 \
+    --vmid "${APP_ID},${MON_ID}" --storage "$target_storage" --mode snapshot \
+    --compress zstd --prune-backups keep-last=2 --enabled 1 \
     --notes-template '{{guestname}} harian'
 fi
 pvesh get /cluster/backup --output-format yaml

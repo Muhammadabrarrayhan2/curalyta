@@ -1,0 +1,158 @@
+# Tahap 3 — Provisioning lab IaaS di Proxmox VE (ops/lab/pve-setup.sh)
+#
+# Catatan pelaksanaan (dicatat apa adanya untuk keperluan VATM):
+# - Run 1 (laptop, ±07:24 WIB 25-10-2026): patching host berhasil (kernel 7.0.14-25-pve),
+#   lalu SSH terputus karena link jaringan VM sempat down (dmesg 00:10:54 jam VM) dan
+#   unduhan cloud image Ubuntu terhenti. Timestamp header run 1 tertulis "00:06 +0700"
+#   karena jam Windows saat itu mundur ±7 jam 18 menit (event Kernel-General ID 1,
+#   dikoreksi otomatis pukul 07:31 WIB). Jam Proxmox juga mundur dan dikoreksi chrony.
+# - Run 2: apt menolak indeks Debian ("signature not live until ...") karena jam VM
+#   masih mundur; pembuatan template gagal karena VM 9000 terkunci dari run 1.
+#   Perbaikan: sinkron jam (chronyc makestep) sebelum apt; template tidak lengkap
+#   dihapus otomatis beserta volume sisanya.
+# - Run 3: template jadi, lalu drive C: laptop penuh (file .vmem 6 GB + disk VM tumbuh),
+#   VMware menahan VM. Perbaikan: mainMem.useNamedFile=FALSE, VM dibuat linked clone,
+#   arsip vzdump dipindah ke disk backup terpisah di drive E:.
+# - Run akhir (di bawah): seluruh langkah sukses (systemd Result=success).
+#
+# Mulai sini: kutipan run 1 (patching host)
+# ======================================================================
+==== 1. Repositori no-subscription dan patching host ====
+apt-listchanges: Mailing root: apt-listchanges: news for pve
+Preconfiguring packages ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52491 files and directories currently installed.)
+Setting up libc6:amd64 (2.41-12+deb13u4) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52491 files and directories currently installed.)
+Setting up base-files (13.8+deb13u7) ...
+Installing new version of config file /etc/debian_version ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up bash (5.2.37-2+b10) ...
+update-alternatives: using /usr/share/man/man7/bash-builtins.7.gz to provide /usr/share/man/man7/builtins.7.gz (builtins.7.gz) in auto mode
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up bsdutils (1:2.41.5-0+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up gzip (1.13-1+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up perl-base (5.40.1-6+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up liblastlog2-2:amd64 (2.41.5-0+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Leaving 'diversion of /sbin/ctrlaltdel to /sbin/ctrlaltdel.usr-is-merged by util-linux-extra'
+Leaving 'diversion of /sbin/fsck.cramfs to /sbin/fsck.cramfs.usr-is-merged by util-linux-extra'
+Leaving 'diversion of /sbin/fsck.minix to /sbin/fsck.minix.usr-is-merged by util-linux-extra'
+Leaving 'diversion of /sbin/mkfs.bfs to /sbin/mkfs.bfs.usr-is-merged by util-linux-extra'
+Leaving 'diversion of /sbin/mkfs.cramfs to /sbin/mkfs.cramfs.usr-is-merged by util-linux-extra'
+Leaving 'diversion of /sbin/mkfs.minix to /sbin/mkfs.minix.usr-is-merged by util-linux-extra'
+Setting up libsmartcols1:amd64 (2.41.5-0+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up libblkid1:amd64 (2.41.5-0+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up libmount1:amd64 (2.41.5-0+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up libuuid1:amd64 (2.41.5-0+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52500 files and directories currently installed.)
+Setting up util-linux (2.41.5-0+deb13u1) ...
+fstrim.service is a disabled or a static unit not running, not starting it.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52505 files and directories currently installed.)
+Setting up libaudit-common (1:4.0.2-2+deb13u1) ...
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 52505 files and directories currently installed.)
+Setting up libaudit1:amd64 (1:4.0.2-2+deb13u1) ...
+... (output dpkg dipersingkat) ...
+pve-manager/9.2.21/4f6e0ac86f9e8c7f (running kernel: 7.0.2-6-pve)
+
+==== 2. Verifikasi virtualisasi bersarang ====
+CPU(s):                                  6
+Model name:                              12th Gen Intel(R) Core(TM) i7-12700H
+Virtualization:                          VT-x
+Virtualization type:                     full
+crw-rw---- 1 root kvm 10, 232 Oct 25 00:08 /dev/kvm
+KVM tersedia: VM berjalan dengan akselerasi hardware
+               total        used        free      shared  buff/cache   available
+Mem:           5.8Gi       2.0Gi       680Mi        28Mi       3.5Gi       3.8Gi
+Swap:          5.8Gi       6.2Mi       5.8Gi
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/mapper/pve-root   30G  5.9G   23G  21% /
+/dev/mapper/pve-root   30G  5.9G   23G  21% /
+
+# ======================================================================
+# Run akhir — dijalankan sebagai unit systemd di pve,  (jam NTP)
+# ======================================================================
+
+==== 1. Repositori no-subscription dan patching host ====
+pve-manager/9.2.21/4f6e0ac86f9e8c7f (running kernel: 7.0.14-25-pve)
+
+==== 2. Verifikasi virtualisasi bersarang ====
+CPU(s):                                  6
+Model name:                              12th Gen Intel(R) Core(TM) i7-12700H
+Virtualization:                          VT-x
+Virtualization type:                     full
+crw-rw---- 1 root kvm 10, 232 Oct 25 07:55 /dev/kvm
+KVM tersedia: VM berjalan dengan akselerasi hardware
+               total        used        free      shared  buff/cache   available
+Mem:           5.8Gi       1.5Gi       4.1Gi        28Mi       446Mi       4.3Gi
+Swap:          5.8Gi          0B       5.8Gi
+Filesystem            Size  Used Avail Use% Mounted on
+/dev/mapper/pve-root   30G  6.0G   23G  22% /
+/dev/mapper/pve-root   30G  6.0G   23G  22% /
+
+==== 3. Template VM Ubuntu 22.04 (cloud-init) ====
+
+==== 4. VM 101 curalyta-app dan VM 102 curalyta-monitor ====
+creating a clone of VM 9000 with ID 101
+create full clone of drive ide2 (local-lvm:vm-9000-cloudinit)
+  Logical volume "vm-101-cloudinit" created.
+  Logical volume pve/vm-101-cloudinit changed.
+allocated target volume 'local-lvm:vm-101-cloudinit'
+create linked clone of drive scsi0 (local-lvm:base-9000-disk-0)
+  Logical volume "vm-101-disk-0" created.
+  Logical volume pve/vm-101-disk-0 changed.
+update VM 101: -cores 2 -ipconfig0 ip=192.168.45.20/24,gw=192.168.45.2 -memory 2560 -onboot 1 -tags curalyta
+  Size of logical volume pve/vm-101-disk-0 changed from <2.20 GiB (563 extents) to 25.00 GiB (6400 extents).
+  Logical volume pve/vm-101-disk-0 successfully resized.
+generating cloud-init ISO
+creating a clone of VM 9000 with ID 102
+create full clone of drive ide2 (local-lvm:vm-9000-cloudinit)
+  Logical volume "vm-102-cloudinit" created.
+  Logical volume pve/vm-102-cloudinit changed.
+allocated target volume 'local-lvm:vm-102-cloudinit'
+create linked clone of drive scsi0 (local-lvm:base-9000-disk-0)
+  Logical volume "vm-102-disk-0" created.
+  Logical volume pve/vm-102-disk-0 changed.
+update VM 102: -cores 2 -ipconfig0 ip=192.168.45.30/24,gw=192.168.45.2 -memory 1536 -onboot 1 -tags curalyta
+  Size of logical volume pve/vm-102-disk-0 changed from <2.20 GiB (563 extents) to 20.00 GiB (5120 extents).
+  WARNING: You have not turned on protection against thin pools running out of space.
+  WARNING: Set activation/thin_pool_autoextend_threshold below 100 to trigger automatic extension of thin pools before they get full.
+  Logical volume pve/vm-102-disk-0 successfully resized.
+  WARNING: Sum of all thin volume sizes (47.21 GiB) exceeds the size of thin pool pve/data and the amount of free space in volume group (<9.88 GiB).
+generating cloud-init ISO
+      VMID NAME                 STATUS     MEM(MB)    BOOTDISK(GB) PID       
+       101 curalyta-app         running    2560              25.00 2284      
+       102 curalyta-monitor     running    1536              20.00 2468      
+      9000 ubuntu-2204-template stopped    2048               2.20 0         
+
+==== 5. Firewall Proxmox per VM ====
+Status: enabled/running (pending changes)
+
+==== 6. Disk backup terpisah dan jadwal vzdump harian ====
+Disk backup: /dev/nvme0n1 (  30G)
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1     30G  2.1M   28G   1% /mnt/backup-disk
+---
+- compress: zstd
+  enabled: 1
+  id: curalyta-daily
+  mode: snapshot
+  next-run: 1792953000
+  notes-template: '{{guestname}} harian'
+  prune-backups:
+    keep-last: '2'
+  schedule: 01:30
+  storage: backup-disk
+  type: vzdump
+  vmid: 101,102
+
+==== Selesai ====
+VM aplikasi : ssh -i ~/.ssh/curalyta_lab curalyta@192.168.45.20
+VM monitor  : ssh -i ~/.ssh/curalyta_lab curalyta@192.168.45.30
+
+# Status unit: success
