@@ -50,8 +50,8 @@ t0=$(date +%s)
 case "$source_arg" in
   latest)
     : "${BACKUP_BUCKET:?BACKUP_BUCKET belum diisi}"
-    latest_name=$(objstore ls --json "backup/${BACKUP_BUCKET}/postgres/" \
-      | grep -o '"key":"curalyta-[^"]*\.dump"' | cut -d'"' -f4 | sort | tail -n 1)
+    latest_name=$(objstore lsf "backup:${BACKUP_BUCKET}/postgres/" --include 'curalyta-*.dump' \
+      | sort | tail -n 1)
     [ -n "$latest_name" ] || { log ERROR "Tidak ada backup di bucket"; exit 1; }
     source_arg="s3://${BACKUP_BUCKET}/postgres/${latest_name}"
     ;;
@@ -61,7 +61,8 @@ if [[ "$source_arg" == s3://* ]]; then
   object="${source_arg#s3://}"
   local_file="$WORK_DIR/$(basename "$object")"
   log INFO "Mengunduh $source_arg"
-  objstore cp --quiet "backup/${object}" "backup/${object}.sha256" "/backups/restore/"
+  objstore copy "backup:$(dirname "$object")/" /backups/restore/ \
+    --include "$(basename "$object")" --include "$(basename "$object").sha256"
 else
   local_file="$source_arg"
 fi

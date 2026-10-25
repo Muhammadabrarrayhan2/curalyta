@@ -68,8 +68,8 @@ Add the direct migration URL and new storage fields in `backend/prisma/schema.pr
 ```prisma
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  url       = env("postgresql://neondb_owner:npg_GmLYAHl0Pe1s@ep-wild-math-a4i6imfb-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+  directUrl = env("postgresql://neondb_owner:npg_GmLYAHl0Pe1s@ep-wild-math-a4i6imfb.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
 }
 
 enum DocumentStorageProvider {

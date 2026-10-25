@@ -210,7 +210,7 @@ IN ACCEPT -p icmp -log nolog # ping untuk diagnosis
 EOF
 
 # VM monitoring: dashboard dan API monitoring hanya dari laptop admin;
-# MinIO (object storage backup) dari VM aplikasi
+# object storage Garage (API S3 :3900) dari VM aplikasi
 cat > /etc/pve/firewall/${MON_ID}.fw <<EOF
 [OPTIONS]
 enable: 1
@@ -223,9 +223,8 @@ IN ACCEPT -source ${PVE_IP} -p tcp -dport 22 -log nolog # SSH dari host Proxmox
 IN ACCEPT -source ${HOST_IP} -p tcp -dport 3000 -log nolog # Grafana
 IN ACCEPT -source ${HOST_IP} -p tcp -dport 9090 -log nolog # Prometheus
 IN ACCEPT -source ${HOST_IP} -p tcp -dport 9093 -log nolog # Alertmanager
-IN ACCEPT -source ${HOST_IP} -p tcp -dport 9001 -log nolog # MinIO console
-IN ACCEPT -source ${APP_IP} -p tcp -dport 9000 -log nolog # MinIO S3 API (backup dari app)
-IN ACCEPT -source ${HOST_IP} -p tcp -dport 9000 -log nolog # MinIO S3 API (admin)
+IN ACCEPT -source ${APP_IP} -p tcp -dport 3900 -log nolog # Garage S3 API (backup dari app)
+IN ACCEPT -source ${HOST_IP} -p tcp -dport 3900 -log nolog # Garage S3 API (admin)
 IN ACCEPT -p icmp -log nolog
 EOF
 pve-firewall compile >/dev/null && pve-firewall restart && pve-firewall status

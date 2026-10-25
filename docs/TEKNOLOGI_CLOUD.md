@@ -17,7 +17,7 @@ Dokumen ini mengidentifikasi teknologi yang dipakai, alasan pemilihannya, dan al
 | Aplikasi | React + Vite (frontend), Node.js + Express + Prisma (backend) | Layanan Curalyta | `frontend/`, `backend/` |
 | Database relasional | PostgreSQL 16 | Data pengguna, pasien, observasi, vital sign | volume `curalyta_postgres_data` |
 | Block storage | LVM-thin Proxmox (`local-lvm`) | Disk virtual VM (thin provisioning) | `pvesm status` |
-| Object storage | MinIO (API S3) | Bucket `curalyta-db-backups`, lifecycle 30 hari | `ops/lab/monitor/` |
+| Object storage | Garage v2.1 (API S3) + klien rclone | Bucket `curalyta-db-backups`, lifecycle 30 hari | `ops/lab/monitor/` |
 | Jaringan virtual | VMware NAT `vmnet8` 192.168.45.0/24 + bridge Linux `vmbr0` | Jaringan privat lab (setara VPC) | Proxmox `/etc/network/interfaces` |
 | Firewall | Proxmox Firewall (iptables/nftables) per VM | Aturan masuk per VM (setara security group) | `/etc/pve/firewall/101.fw`, `102.fw` |
 | Akses publik | Cloudflare Tunnel | HTTPS publik dari lab tanpa membuka port masuk | `curalyta-tunnel.service` |
@@ -68,7 +68,7 @@ Nginx adalah satu-satunya container yang membuka port (80/443). Fungsinya:
 |---|---|---|
 | Block storage | Volume disk mentah untuk satu VM, latensi rendah | Disk VM di `local-lvm` (LVM-thin); volume Docker `curalyta_postgres_data` berada di atasnya |
 | File storage | Folder dan file bersama | Volume `curalyta_uploads` untuk dokumen medis yang diunggah; storage `local` Proxmox untuk ISO, template, dan arsip vzdump |
-| Object storage | Objek + metadata lewat API HTTP (S3), skalabel, mendukung lifecycle dan versioning | MinIO bucket `curalyta-db-backups`: file `pg_dump` + checksum, versioning aktif, hapus otomatis setelah 30 hari |
+| Object storage | Objek + metadata lewat API HTTP (S3), skalabel, mendukung aturan lifecycle | Garage bucket `curalyta-db-backups`: file `pg_dump` + checksum SHA-256, hapus otomatis setelah 30 hari (lifecycle S3) |
 | Relational database | Tabel, SQL, transaksi ACID | PostgreSQL 16, 14 model Prisma, migrasi otomatis `prisma migrate deploy` |
 | Non-relational | Model fleksibel (key-value, dokumen, time-series) | Prometheus TSDB menyimpan metrik time-series selama 45 hari |
 
@@ -77,7 +77,7 @@ Nginx adalah satu-satunya container yang membuka port (80/443). Fungsinya:
 - **Subnet privat:** 192.168.45.0/24 (VMware NAT). Gateway dan DNS 192.168.45.2. Lalu lintas keluar ke internet melalui NAT.
 - **Firewall per VM (default deny):**
   - `curalyta-app`: masuk hanya 80/443 (publik), 22 dari laptop admin dan host Proxmox, 9100/8080 (metrik) hanya dari VM monitoring.
-  - `curalyta-monitor`: Grafana 3000, Prometheus 9090, Alertmanager 9093, dan konsol MinIO 9001 hanya dari laptop admin; API MinIO 9000 hanya dari VM aplikasi dan laptop admin.
+  - `curalyta-monitor`: Grafana 3000, Prometheus 9090, dan Alertmanager 9093 hanya dari laptop admin; API S3 Garage 3900 hanya dari VM aplikasi dan laptop admin.
 - **Jaringan container:** jaringan Docker `curalyta_internal`; PostgreSQL dan backend tidak terekspos ke luar VM.
 - **Akses publik:** Cloudflare Tunnel membuat koneksi keluar dari VM ke edge Cloudflare, sehingga layanan dapat diakses publik lewat HTTPS tanpa port forwarding atau IP publik.
 
@@ -87,7 +87,7 @@ Nginx adalah satu-satunya container yang membuka port (80/443). Fungsinya:
 |---|---|---|
 | Admin lab ke Proxmox dan VM | SSH key ed25519 khusus lab (`curalyta_lab`); password root hanya diketahui pemilik | Tanpa password lewat jaringan |
 | Pengguna VM | User `curalyta` (sudo) dibuat cloud-init, hanya login dengan key | Least privilege; root tidak dipakai di VM |
-| Backup ke object storage | User MinIO `curalyta-backup` dengan policy hanya `ListBucket/GetObject/PutObject` pada satu bucket | Least privilege; tidak bisa menghapus atau membaca bucket lain |
+| Backup ke object storage | Key Garage `curalyta-backup` dengan izin hanya baca + tulis pada bucket `curalyta-db-backups` (tanpa hak owner, tidak bisa membuat bucket) | Least privilege; tidak bisa mengakses bucket lain atau mengubah pengaturan bucket |
 | CI/CD | `GITHUB_TOKEN` sementara per job dengan izin `packages: write` (build) atau `packages: read` (deploy) | Token berumur pendek, tidak ada kunci statis |
 | Runner self-hosted | Terdaftar dengan token registrasi sekali pakai, berjalan sebagai user `curalyta` | Hanya job berlabel `curalyta-lab` |
 | Pengguna aplikasi | JWT + bcrypt, peran ADMIN/DOCTOR/PATIENT, rate limit login | RBAC di tingkat aplikasi |
@@ -125,7 +125,7 @@ Detail ambang batas dan cara membaca dashboard ada di `docs/PEMANTAUAN.md`.
 |---|---|---|
 | Failover | Pindah otomatis ke komponen sehat | Rotasi API key Groq: bila satu key kena limit atau error, request otomatis pindah ke key berikutnya (`groq.ts`). Docker `restart: unless-stopped` menjalankan ulang container yang mati |
 | Resiliency | Bertahan dan pulih dari gangguan | Healthcheck container + `depends_on: service_healthy`; migrasi database dicoba ulang 5×; VM `onboot=1` menyala otomatis saat host boot |
-| Replication | Salinan data/sumber daya | Backup database disalin ke VM lain (MinIO di `curalyta-monitor`) dengan versioning; arsip vzdump VM di storage Proxmox; image tersimpan di GHCR |
+| Replication | Salinan data/sumber daya | Backup database disalin ke VM lain (Garage di `curalyta-monitor`); arsip vzdump VM di storage Proxmox; image tersimpan di GHCR |
 | Access (broker) | Akses dari berbagai perangkat lewat perantara | Nginx sebagai broker permintaan; Cloudflare Tunnel sebagai broker akses publik HTTPS |
 
 ## 11. Ancaman keamanan dan mitigasi
@@ -134,7 +134,7 @@ Detail ambang batas dan cara membaca dashboard ada di `docs/PEMANTAUAN.md`.
 |---|---|
 | DoS/DDoS | Rate limit global (200 req/15 menit per IP) dan login (10 percobaan/15 menit); edge Cloudflare di depan jalur publik; firewall default deny |
 | Serangan autentikasi | Password di-hash bcrypt (12 ronde); JWT secret acak 64 byte; rate limit login; SSH hanya dengan key |
-| Otorisasi | RBAC peran ADMIN/DOCTOR/PATIENT; dokter hanya mengakses pasiennya; policy MinIO least privilege |
+| Otorisasi | RBAC peran ADMIN/DOCTOR/PATIENT; dokter hanya mengakses pasiennya; izin key Garage least privilege |
 | Kebocoran secret | `.env` izin 600 dan di-gitignore; `.dockerignore` mencegah `.env` masuk image; riwayat git dipindai tidak mengandung secret |
 | Kerentanan OS | `unattended-upgrades` di VM; patching Proxmox (`apt dist-upgrade`) |
 

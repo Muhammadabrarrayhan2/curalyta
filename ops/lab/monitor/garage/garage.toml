@@ -1,0 +1,20 @@
+# Garage — object storage S3-compatible untuk backup database Curalyta.
+# Satu node (replication_factor = 1) karena lab hanya punya satu VM storage.
+# Rahasia (rpc_secret, admin token) diberikan lewat environment
+# GARAGE_RPC_SECRET dan GARAGE_ADMIN_TOKEN, bukan di file ini.
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[admin]
+# /metrics untuk Prometheus (hanya di jaringan internal Docker)
+api_bind_addr = "[::]:3903"

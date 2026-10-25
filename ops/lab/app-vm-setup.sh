@@ -4,7 +4,8 @@
 #
 # Dijalankan sebagai root di VM aplikasi. Nilai rahasia dari luar
 # diberikan lewat environment (tidak pernah ditulis ke repo):
-#   GROQ_API_KEYS=...  BACKUP_S3_SECRET_KEY=...  bash ops/lab/app-vm-setup.sh
+#   GROQ_API_KEYS=... BACKUP_S3_ACCESS_KEY=... BACKUP_S3_SECRET_KEY=... \
+#     bash ops/lab/app-vm-setup.sh
 #
 #   1. Docker Engine + Compose, rotasi log container
 #   2. Repositori Curalyta di /opt/curalyta
@@ -58,8 +59,8 @@ ADMIN_PASSWORD=Adm-$(rand 10)
 GROQ_API_KEYS=${GROQ_API_KEYS:-}
 BACKUP_BUCKET=curalyta-db-backups
 BACKUP_DIR=/var/backups/curalyta
-BACKUP_S3_ENDPOINT=http://192.168.45.30:9000
-BACKUP_S3_ACCESS_KEY=curalyta-backup
+BACKUP_S3_ENDPOINT=http://192.168.45.30:3900
+BACKUP_S3_ACCESS_KEY=${BACKUP_S3_ACCESS_KEY:-}
 BACKUP_S3_SECRET_KEY=${BACKUP_S3_SECRET_KEY:-}
 EOF
   umask 022

@@ -110,7 +110,7 @@ Jalur publik lab memakai Cloudflare Tunnel: sertifikat TLS dikelola dan diperbar
 ### 4.6 Disk penuh
 
 1. `df -h` dan `docker system df` di VM.
-2. Bersihkan aman: `docker image prune -af --filter until=168h`, `sudo journalctl --vacuum-time=7d`, hapus dump lokal lama di `/var/backups/curalyta` (salinan tetap di MinIO).
+2. Bersihkan aman: `docker image prune -af --filter until=168h`, `sudo journalctl --vacuum-time=7d`, hapus dump lokal lama di `/var/backups/curalyta` (salinan tetap di object storage Garage).
 3. Jangan menghapus volume `curalyta_postgres_data`.
 4. Jika tetap > 80%: L2 memperbesar disk `qm resize 101 scsi0 +10G`, lalu di VM `sudo growpart /dev/sda 1 && sudo resize2fs /dev/sda1`.
 

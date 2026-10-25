@@ -34,16 +34,23 @@ compose() {
   docker compose --project-directory "$APP_DIR" -f "$APP_DIR/docker-compose.yml" "$@"
 }
 
-# Klien object storage S3-compatible (MinIO "mc") sebagai container sekali
-# pakai. Alias "backup" menunjuk ke BACKUP_S3_ENDPOINT; direktori backup
-# lokal di-mount ke /backups. Kredensial hanya lewat environment.
+# Klien object storage S3-compatible (rclone) sebagai container sekali pakai.
+# Remote "backup:" menunjuk ke BACKUP_S3_ENDPOINT (Garage di VM monitoring);
+# direktori backup lokal di-mount ke /backups. Kredensial hanya lewat
+# environment. no_check_bucket: key backup sengaja tidak boleh membuat bucket.
 objstore() {
   : "${BACKUP_S3_ENDPOINT:?BACKUP_S3_ENDPOINT belum diisi}"
   : "${BACKUP_S3_ACCESS_KEY:?BACKUP_S3_ACCESS_KEY belum diisi}"
   : "${BACKUP_S3_SECRET_KEY:?BACKUP_S3_SECRET_KEY belum diisi}"
-  local scheme="${BACKUP_S3_ENDPOINT%%://*}" hostport="${BACKUP_S3_ENDPOINT#*://}"
   docker run --rm --network host \
-    -e "MC_HOST_backup=${scheme}://${BACKUP_S3_ACCESS_KEY}:${BACKUP_S3_SECRET_KEY}@${hostport}" \
+    -e RCLONE_CONFIG_BACKUP_TYPE=s3 \
+    -e RCLONE_CONFIG_BACKUP_PROVIDER=Other \
+    -e "RCLONE_CONFIG_BACKUP_ENDPOINT=${BACKUP_S3_ENDPOINT}" \
+    -e "RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID=${BACKUP_S3_ACCESS_KEY}" \
+    -e "RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY=${BACKUP_S3_SECRET_KEY}" \
+    -e RCLONE_CONFIG_BACKUP_REGION=garage \
+    -e RCLONE_CONFIG_BACKUP_FORCE_PATH_STYLE=true \
+    -e RCLONE_CONFIG_BACKUP_NO_CHECK_BUCKET=true \
     -v "${BACKUP_DIR:-/var/backups/curalyta}:/backups" \
-    "${MC_IMAGE:-minio/mc:RELEASE.2025-08-13T08-35-41Z}" "$@"
+    "${RCLONE_IMAGE:-rclone/rclone:1.71.1}" "$@"
 }

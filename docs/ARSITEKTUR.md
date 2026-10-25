@@ -42,7 +42,7 @@ flowchart TB
           am["Alertmanager :9093"]
           graf["Grafana :3000"]
           bb["Blackbox Exporter"]
-          minio[("MinIO :9000/:9001<br/>bucket curalyta-db-backups<br/>lifecycle 30 hari")]
+          garage[("Garage S3 :3900<br/>bucket curalyta-db-backups<br/>lifecycle 30 hari")]
         end
       end
     end
@@ -57,9 +57,9 @@ flowchart TB
   nginx -->|/api, /health| be
   be --> pg
   be -->|HTTPS| groq
-  cron -->|pg_dump → S3 API| minio
+  cron -->|pg_dump → S3 API (rclone)| garage
   admin -->|SSH key / :8006| PVE
-  admin -->|:3000 :9090 :9001| MON
+  admin -->|:3000 :9090 :9093 :3900| MON
   fw -.melindungi.- APP
   fw -.melindungi.- MON
   APP --- bridge
@@ -111,7 +111,7 @@ sequenceDiagram
 
 | Lapisan | Mekanisme | Jadwal | Retensi | Lokasi |
 |---|---|---|---|---|
-| Database (logis) | `ops/backup-db.sh`: `pg_dump -Fc` + SHA-256 → MinIO | Harian 02:00 WIB | 7 file lokal; 30 hari di bucket (lifecycle) | VM 101 `/var/backups/curalyta` → VM 102 bucket `curalyta-db-backups` |
+| Database (logis) | `ops/backup-db.sh`: `pg_dump -Fc` + SHA-256 → Garage (rclone) | Harian 02:00 WIB | 7 file lokal; 30 hari di bucket (lifecycle) | VM 101 `/var/backups/curalyta` → VM 102 bucket `curalyta-db-backups` |
 | VM (image penuh) | vzdump mode snapshot, kompresi zstd | Harian 01:30 WIB | 7 harian | `pve:/var/lib/vz/dump` |
 | Snapshot VM | `qm snapshot` sebelum perubahan berisiko | Sesuai kebutuhan | Dihapus setelah perubahan terverifikasi | `local-lvm` |
 | Image aplikasi | GHCR tag per commit | Setiap push | Tak terbatas | GitHub |

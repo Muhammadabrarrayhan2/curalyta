@@ -5,8 +5,9 @@
 #   alertmanager : routing alert -> ntfy.sh (push + email) (:9093)
 #   grafana      : dashboard (:3000)
 #   blackbox     : pemeriksaan HTTP/HTTPS endpoint (uptime + latensi)
-#   minio        : object storage S3-compatible untuk backup database (:9000/:9001)
-#   minio-init   : membuat bucket, lifecycle 30 hari, user khusus backup
+#   garage       : object storage S3-compatible untuk backup database (:3900)
+#                  (bucket, key, dan lifecycle 30 hari disiapkan oleh
+#                  ops/lab/monitor-vm-setup.sh lewat CLI garage + API S3)
 #
 # Jalankan: cd /opt/curalyta/ops/lab/monitor && docker compose up -d
 # Nilai rahasia ada di .env (dibuat oleh monitor-vm-setup.sh, tidak di-commit).
@@ -69,54 +70,22 @@ services:
     ports: ["3000:3000"]
     logging: *default-logging
 
-  minio:
-    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+  garage:
+    image: dxflrs/garage:v2.1.0
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER wajib diisi}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD wajib diisi}
-      MINIO_PROMETHEUS_AUTH_TYPE: public
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?GARAGE_RPC_SECRET wajib diisi}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?GARAGE_ADMIN_TOKEN wajib diisi}
     volumes:
-      - minio_data:/data
-    ports: ["9000:9000", "9001:9001"]
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+    ports: ["3900:3900"]
     logging: *default-logging
-
-  minio-init:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    depends_on:
-      minio:
-        condition: service_healthy
-    environment:
-      MC_HOST_lab: http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000
-      BACKUP_BUCKET: ${BACKUP_BUCKET:-curalyta-db-backups}
-      BACKUP_USER: ${BACKUP_S3_ACCESS_KEY:?BACKUP_S3_ACCESS_KEY wajib diisi}
-      BACKUP_SECRET: ${BACKUP_S3_SECRET_KEY:?BACKUP_S3_SECRET_KEY wajib diisi}
-    volumes:
-      - ./minio/backup-policy.json:/policy.json:ro
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -e
-        mc mb --ignore-existing lab/$$BACKUP_BUCKET
-        mc version enable lab/$$BACKUP_BUCKET
-        # Lifecycle: objek backup dihapus otomatis setelah 30 hari
-        mc ilm rule ls lab/$$BACKUP_BUCKET 2>/dev/null | grep -q '30' || \
-          mc ilm rule add --expire-days 30 --noncurrent-expire-days 7 lab/$$BACKUP_BUCKET
-        # User khusus backup dengan hak minimal (hanya bucket backup)
-        mc admin policy create lab curalyta-backup /policy.json 2>/dev/null || true
-        mc admin user add lab $$BACKUP_USER $$BACKUP_SECRET
-        mc admin policy attach lab curalyta-backup --user $$BACKUP_USER 2>/dev/null || true
-        mc ilm rule ls lab/$$BACKUP_BUCKET
-    restart: "no"
 
 volumes:
   prometheus_data:
   alertmanager_data:
   grafana_data:
-  minio_data:
+  garage_meta:
+  garage_data:

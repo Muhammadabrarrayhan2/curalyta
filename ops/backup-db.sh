@@ -5,8 +5,8 @@
 # Alur:
 #   1. pg_dump (format custom, terkompresi) dari container postgres
 #   2. Simpan lokal dengan timestamp + checksum SHA-256
-#   3. Upload ke bucket S3-compatible (MinIO di VM monitoring) memakai
-#      klien "mc" yang dijalankan sebagai container sekali pakai
+#   3. Upload ke bucket S3-compatible (Garage di VM monitoring) memakai
+#      klien rclone yang dijalankan sebagai container sekali pakai
 #   4. Simpan hanya 7 file terbaru di disk lokal (bucket punya lifecycle 30 hari)
 #
 # Dijalankan harian oleh cron (/etc/cron.d/curalyta-backup) dan bisa manual:
@@ -46,7 +46,8 @@ sha256sum "$file" | awk '{print $1}' > "$file.sha256"
 size=$(stat -c %s "$file")
 
 dest="${BACKUP_BUCKET}/postgres/$(basename "$file")"
-if ! objstore cp --quiet "/backups/$(basename "$file")" "/backups/$(basename "$file").sha256" "backup/${BACKUP_BUCKET}/postgres/"; then
+if ! objstore copy /backups "backup:${BACKUP_BUCKET}/postgres/" \
+     --include "$(basename "$file")" --include "$(basename "$file").sha256"; then
   log ERROR "Upload ke object storage ($dest) gagal; file lokal tetap disimpan"
   exit 2
 fi

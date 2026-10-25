@@ -9,7 +9,8 @@
 #   2. Repositori Curalyta di /opt/curalyta
 #   3. Rahasia acak di ops/lab/monitor/.env (izin 600, tidak di-commit)
 #   4. Render konfigurasi Alertmanager (topik ntfy + email penerima)
-#   5. Jalankan Prometheus, Alertmanager, Grafana, Blackbox, MinIO
+#   5. Jalankan Prometheus, Alertmanager, Grafana, Blackbox
+#   6. Object storage Garage: bucket backup, key hak minimal, lifecycle 30 hari
 # ============================================================
 set -euo pipefail
 
@@ -36,15 +37,20 @@ chown -R curalyta:curalyta "$APP_DIR"
 
 step "3. Rahasia stack monitoring"
 rand() { openssl rand -hex "$1"; }
+# .env lama dari versi berbasis MinIO tidak punya rahasia Garage: buat ulang
+if [ -f "$MON_DIR/.env" ] && ! grep -q '^GARAGE_RPC_SECRET=' "$MON_DIR/.env"; then
+  mv "$MON_DIR/.env" "$MON_DIR/.env.lama.$(date +%s)"
+fi
 if [ ! -f "$MON_DIR/.env" ]; then
   umask 077
+  # Format kunci Garage: access key "GK" + 24 hex, secret 64 hex
   cat > "$MON_DIR/.env" <<EOF
 GRAFANA_ADMIN_PASSWORD=$(rand 12)
-MINIO_ROOT_USER=labadmin
-MINIO_ROOT_PASSWORD=$(rand 16)
+GARAGE_RPC_SECRET=$(rand 32)
+GARAGE_ADMIN_TOKEN=$(rand 32)
 BACKUP_BUCKET=curalyta-db-backups
-BACKUP_S3_ACCESS_KEY=curalyta-backup
-BACKUP_S3_SECRET_KEY=$(rand 16)
+BACKUP_S3_ACCESS_KEY=GK$(rand 12)
+BACKUP_S3_SECRET_KEY=$(rand 32)
 NTFY_TOPIC=curalyta-alerts-$(rand 6)
 ALERT_EMAIL=${ALERT_EMAIL}
 EOF
@@ -75,13 +81,39 @@ chmod 644 "$MON_DIR/alertmanager/alertmanager.yml"
 step "5. Menjalankan stack monitoring"
 cd "$MON_DIR"
 docker compose pull --quiet
-docker compose up -d --wait --wait-timeout 180 prometheus alertmanager blackbox grafana minio
-docker compose up minio-init
+docker compose up -d --wait --wait-timeout 180 prometheus alertmanager blackbox grafana
+docker compose up -d garage
+
+step "6. Object storage Garage: layout, key backup, bucket, lifecycle"
+g() { docker compose exec -T garage /garage "$@"; }
+for i in $(seq 1 30); do g status >/dev/null 2>&1 && break; sleep 2; done
+g status
+# Satu node, kapasitas 15 GB untuk zona "lab" (layout hanya diterapkan sekali)
+if ! g layout show 2>/dev/null | grep -qE 'Current cluster layout version: [1-9]'; then
+  node=$(g status | awk '/HEALTHY NODES/ {f = 1; next} f && $1 ~ /^[0-9a-f]+$/ {print $1; exit}')
+  g layout assign -z lab -c 15G "$node"
+  g layout apply --version 1
+fi
+# Key khusus backup (diimpor agar nilainya sama dengan .env di VM aplikasi)
+g key info curalyta-backup >/dev/null 2>&1 || \
+  g key import --yes -n curalyta-backup "$BACKUP_S3_ACCESS_KEY" "$BACKUP_S3_SECRET_KEY"
+g bucket info "$BACKUP_BUCKET" >/dev/null 2>&1 || g bucket create "$BACKUP_BUCKET"
+# Hak minimal: baca + tulis pada satu bucket saja (tanpa hak owner)
+g bucket allow --read --write "$BACKUP_BUCKET" --key curalyta-backup
+# Lifecycle lewat API S3: objek dihapus otomatis setelah 30 hari
+lifecycle='<LifecycleConfiguration><Rule><ID>hapus-setelah-30-hari</ID><Status>Enabled</Status><Filter><Prefix></Prefix></Filter><Expiration><Days>30</Days></Expiration></Rule></LifecycleConfiguration>'
+s3() { curl -fsS --aws-sigv4 "aws:amz:garage:s3" --user "$BACKUP_S3_ACCESS_KEY:$BACKUP_S3_SECRET_KEY" "$@"; }
+s3 -X PUT "http://127.0.0.1:3900/${BACKUP_BUCKET}?lifecycle" \
+  -H "Content-MD5: $(printf '%s' "$lifecycle" | openssl dgst -md5 -binary | base64)" \
+  -H 'Content-Type: application/xml' --data-binary "$lifecycle"
+echo "Lifecycle bucket ${BACKUP_BUCKET}:"
+s3 "http://127.0.0.1:3900/${BACKUP_BUCKET}?lifecycle"; echo
+g bucket info "$BACKUP_BUCKET"
 docker compose ps
 
 echo
 echo "Grafana     : http://$(hostname -I | awk '{print $1}'):3000 (user admin)"
 echo "Prometheus  : http://$(hostname -I | awk '{print $1}'):9090"
-echo "MinIO       : http://$(hostname -I | awk '{print $1}'):9001"
+echo "Object store: http://$(hostname -I | awk '{print $1}'):3900 (S3 API, bucket ${BACKUP_BUCKET})"
 echo "Topik ntfy  : https://ntfy.sh/${NTFY_TOPIC}"
 echo "Rahasia     : $MON_DIR/.env (root/curalyta, izin 600)"

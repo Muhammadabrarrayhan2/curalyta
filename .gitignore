@@ -67,3 +67,4 @@ docs/bukti/*.secret
 # Rendered lab configs containing secrets (generated on the VMs)
 ops/lab/monitor/.env
 ops/lab/monitor/alertmanager/alertmanager.yml
+ops/lab/monitor/.env.lama.*

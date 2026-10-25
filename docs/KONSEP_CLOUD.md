@@ -109,7 +109,7 @@ Target 99% berarti downtime maksimal sekitar 7 jam 18 menit per bulan (30,4 hari
 | Image | Template container yang tidak berubah, disimpan di registry (GHCR) |
 | Template VM | VM dasar Ubuntu 22.04 (ID 9000) untuk membuat VM baru dengan cepat |
 | Cloud-init | Mekanisme konfigurasi awal VM (user, SSH key, IP, paket) |
-| Object storage | Penyimpanan berbasis objek lewat API S3 (MinIO, bucket `curalyta-db-backups`) |
+| Object storage | Penyimpanan berbasis objek lewat API S3 (Garage, bucket `curalyta-db-backups`) |
 | Block storage | Disk virtual untuk VM (`local-lvm`, LVM-thin) |
 | Reverse proxy | Gerbang tunggal yang meneruskan permintaan ke layanan internal (Nginx) |
 | Snapshot | Salinan keadaan VM pada satu titik waktu (`qm snapshot`) |
