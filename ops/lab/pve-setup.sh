@@ -104,6 +104,11 @@ df -h / /var/lib/vz
 # Storage 'local' boleh menyimpan snippet cloud-init dan disk import
 pvesm set local --content iso,vztmpl,backup,snippets,import
 
+# Metrik host hypervisor (CPU, RAM, disk) untuk Prometheus di VM monitoring
+apt-get install -y -qq prometheus-node-exporter
+systemctl enable --now prometheus-node-exporter
+apt-get clean
+
 # ---------- 3. Template Ubuntu 22.04 ----------
 step "3. Template VM Ubuntu 22.04 (cloud-init)"
 mkdir -p "$(dirname "$IMG_PATH")" /var/lib/vz/snippets
