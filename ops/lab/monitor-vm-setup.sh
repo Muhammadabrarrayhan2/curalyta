@@ -24,6 +24,9 @@ step "1. Docker"
 bash "$(dirname "$(readlink -f "$0")")/install-docker.sh"
 
 step "2. Repositori"
+# Repo dimiliki user curalyta; root perlu pengecualian safe.directory git
+git config --system --get-all safe.directory 2>/dev/null | grep -qx "$APP_DIR" || \
+  git config --system --add safe.directory "$APP_DIR"
 if [ ! -d "$APP_DIR/.git" ]; then
   git clone --quiet "$REPO_URL" "$APP_DIR"
 else
