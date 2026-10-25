@@ -100,14 +100,11 @@ g key info curalyta-backup >/dev/null 2>&1 || \
 g bucket info "$BACKUP_BUCKET" >/dev/null 2>&1 || g bucket create "$BACKUP_BUCKET"
 # Hak minimal: baca + tulis pada satu bucket saja (tanpa hak owner)
 g bucket allow --read --write "$BACKUP_BUCKET" --key curalyta-backup
-# Lifecycle lewat API S3: objek dihapus otomatis setelah 30 hari
-lifecycle='<LifecycleConfiguration><Rule><ID>hapus-setelah-30-hari</ID><Status>Enabled</Status><Filter><Prefix></Prefix></Filter><Expiration><Days>30</Days></Expiration></Rule></LifecycleConfiguration>'
-s3() { curl -fsS --aws-sigv4 "aws:amz:garage:s3" --user "$BACKUP_S3_ACCESS_KEY:$BACKUP_S3_SECRET_KEY" "$@"; }
-s3 -X PUT "http://127.0.0.1:3900/${BACKUP_BUCKET}?lifecycle" \
-  -H "Content-MD5: $(printf '%s' "$lifecycle" | openssl dgst -md5 -binary | base64)" \
-  -H 'Content-Type: application/xml' --data-binary "$lifecycle"
+# Lifecycle lewat API S3: objek dihapus otomatis setelah 30 hari.
+# Ditandatangani SigV4 dengan Python standar (curl Ubuntu 22.04 tidak ikut
+# menandatangani header x-amz-content-sha256 yang diwajibkan Garage).
 echo "Lifecycle bucket ${BACKUP_BUCKET}:"
-s3 "http://127.0.0.1:3900/${BACKUP_BUCKET}?lifecycle"; echo
+python3 "$APP_DIR/ops/lab/s3-lifecycle.py" put "$BACKUP_BUCKET" 30
 g bucket info "$BACKUP_BUCKET"
 docker compose ps
 
