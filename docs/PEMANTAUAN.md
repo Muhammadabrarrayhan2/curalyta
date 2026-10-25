@@ -97,6 +97,11 @@ Rincian kegagalan dari Prometheus (`probe_success` internal = 0):
 - Bila simulasi terencana diperlakukan sebagai pemeliharaan terencana (pengecualian `SLA.md` bagian 3), sisa downtime tidak terencana hanya deploy (1 sampel) → ±99,0%.
 - Celah pemantauan: saat laptop tidur ±1 jam (10:36–11:32), seluruh lab, termasuk Prometheus, ikut berhenti sehingga tidak ada data. Downtime nyata itu tidak tercatat. Pemantauan dari dalam host yang sama tidak dapat mendeteksi matinya host.
 
+Temuan tambahan saat pengambilan screenshot (13:00 WIB):
+
+- Jalur publik (quick tunnel) sempat gagal pukul 11:58–12:05 dan 12:52–12:55, sementara probe internal tetap UP. Log `cloudflared` mencatat `datagram manager error: timeout: no recent network activity` lalu koneksi terdaftar ulang ke edge `sin02`. Penyebabnya gangguan koneksi tunnel ke Cloudflare (pihak ketiga), bukan aplikasi. Quick tunnel hanya memakai satu koneksi dan tidak memiliki SLA, sehingga ketersediaan jalur publik (±79%) lebih rendah daripada jalur internal.
+- Panel "Container aplikasi (cAdvisor)" kosong sejak awal. cAdvisor v0.52.1 tidak bisa membaca layer container pada Docker 29 yang memakai image store containerd (`failed to identify the read-write layer ID`). Perbaikan: naik ke cAdvisor v0.55.1 (commit `4c168a2`), diuji dulu dengan container sementara, lalu diterapkan. Metrik kelima container muncul kembali mulai 13:03 WIB.
+
 ### 5.2 Tindak lanjut
 
 1. Pasang uptime check eksternal (mis. UptimeRobot/Better Stack paket gratis, dari beberapa region) ke URL publik, agar matinya host tetap terdeteksi.

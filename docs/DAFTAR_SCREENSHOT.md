@@ -1,86 +1,115 @@
-# Daftar Screenshot yang Perlu Diambil
+# Daftar Screenshot Bukti
 
-Screenshot melengkapi log bukti di `docs/bukti/`. Simpan di `docs/screenshot/` dengan nama `U<unit>-<nomor>-<deskripsi>.png` (contoh `U4-03-github-actions-run.png`). Pastikan jam/tanggal terlihat (taskbar Windows atau kolom waktu di aplikasi).
+Screenshot melengkapi log bukti di `docs/bukti/` dan disimpan di `docs/screenshot/` dengan nama `U<unit>-<nomor>-<deskripsi>.png`.
+
+## Cara pengambilan
+
+Sebanyak 38 screenshot diambil pada 25 Oktober 2026 pukul 12:33–13:13 WIB dengan browser Microsoft Edge headless (Playwright) dari laptop admin:
+
+- Halaman web dibuka langsung dari server lab, GitHub, dan URL publik. Bilah alamat dan jam di bagian atas gambar adalah bingkai yang ditambahkan saat pengambilan. Jamnya diambil dari jam VM lab yang tersinkron NTP, bukan dari jam laptop.
+- Gambar terminal berisi keluaran asli dari perintah yang dijalankan lewat SSH pada saat itu, lalu ditampilkan dalam bingkai terminal.
+- Proxmox dibuka dengan user audit sementara `shot-audit@pve`. Hak user ini hanya baca: role PVEAuditor ditambah role sementara untuk melihat isi storage. User dan role tersebut dihapus segera setelah pengambilan selesai. Password root tidak dipakai.
+- Nilai rahasia tidak ditampilkan. Topik ntfy disamarkan menjadi `curalyta-alerts-xxxxxxxxxxxx` dan ID access key Garage menjadi `GK******`. Password Grafana dan admin hanya dibaca oleh skrip dan tidak pernah dicetak.
 
 Alamat yang dipakai:
-- Proxmox: https://192.168.45.10:8006 (login `root`, realm Linux PAM)
-- Grafana: http://192.168.45.30:3000 (user `admin`; password di `/opt/curalyta/ops/lab/monitor/.env` VM 102: `sudo grep GRAFANA /opt/curalyta/ops/lab/monitor/.env`)
-- Prometheus: http://192.168.45.30:9090 · Alertmanager: http://192.168.45.30:9093
+- Proxmox: https://192.168.45.10:8006
+- Grafana: http://192.168.45.30:3000 · Prometheus: http://192.168.45.30:9090 · Alertmanager: http://192.168.45.30:9093
 - Produksi: URL di `/opt/curalyta/.public-url` (VM 101) · Staging: https://curalyta-frontend.vercel.app
 - GitHub: https://github.com/Muhammadabrarrayhan2/curalyta
 
+Status: "Ada" berarti berkas sudah ada di `docs/screenshot/`. "Manual" berarti halaman tersebut butuh login akun pribadi atau berada di desktop, jadi pemilik akun yang mengambilnya.
+
 ## Unit 1: Terminologi dan konsep (J.631120.001.01)
 
-| No | Halaman | Cara membuka | Yang harus terlihat |
+| No | Berkas | Isi | Status |
 |---|---|---|---|
-| U1-01 | Proxmox Datacenter → Summary | Klik Datacenter | Sumber daya pool: CPU, RAM, storage (resource pooling) |
-| U1-02 | Proxmox → `pve` → VM 101 dan 102 di pohon kiri | Panel kiri | VM sebagai layanan IaaS (on-demand self-service) |
-| U1-03 | Aplikasi Curalyta di ponsel lewat URL publik | Buka URL produksi di HP | Broad network access |
-| U1-04 | Vercel → project curalyta-frontend → Deployments | vercel.com/dashboard | PaaS: platform yang build/deploy |
-| U1-05 | Grafana dashboard "Curalyta, SLA & Infrastruktur" | Dashboards → Curalyta | Measured service, target SLA 99% |
+| U1-01 | `U1-01-proxmox-datacenter-summary.png` | Datacenter Summary: 1 node online, 2 VM berjalan, 1 template (resource pooling) | Ada |
+| U1-02 | `U1-02-proxmox-daftar-vm.png` | Daftar resource: VM 101/102, template 9000, tiga storage, pemakaian CPU/RAM/disk | Ada |
+| U1-03 | `U1-03-akses-ponsel-url-publik.png` | Aplikasi di layar ponsel (390 px) lewat URL publik HTTPS (broad network access) | Ada |
+| U1-04 | `U1-04-vercel-deployments.png` | Vercel → project curalyta-frontend → Deployments (PaaS) | Manual |
+| U1-05 | `U1-05-grafana-dashboard-sla.png` | Dashboard Grafana "Curalyta, SLA & Infrastruktur" (measured service, target 99%) | Ada |
 
 ## Unit 2: Teknologi (J.631120.002.01)
 
-| No | Halaman | Cara membuka | Yang harus terlihat |
+| No | Berkas | Isi | Status |
 |---|---|---|---|
-| U2-01 | VMware Workstation dengan VM `curalyta-pve` berjalan | Aplikasi VMware | Virtualisasi tingkat 1 |
-| U2-02 | Proxmox Shell: `ls -l /dev/kvm; lscpu \| grep Virtualization` | `pve` → Shell | Nested virtualization (KVM) aktif |
-| U2-03 | Proxmox → `pve` → Firewall dan VM 101 → Firewall | Tab Firewall | Aturan default DROP + port yang diizinkan |
-| U2-04 | Terminal VM 101: `docker compose ps` | SSH ke 192.168.45.20 | 4 container healthy, hanya nginx membuka port |
-| U2-05 | GitHub → Packages (`curalyta/backend`, `curalyta/frontend`) | Profil GitHub → Packages | Container registry, tag per commit |
-| U2-06 | Terminal VM 102: `docker compose exec garage /garage bucket info curalyta-db-backups` | SSH ke 192.168.45.30 | Object storage, izin key RW |
-| U2-07 | Proxmox → `pve` → `local-lvm` → VM Disks dan `backup-disk` → Backups | Panel storage | Block storage dan arsip backup |
+| U2-01 | `U2-01-vmware-curalyta-pve.png` | VMware Workstation dengan VM `curalyta-pve` berjalan | Manual |
+| U2-02 | `U2-02-proxmox-nested-kvm.png` | `pveversion`, `/dev/kvm`, `lscpu` (VT-x), `qm list` | Ada |
+| U2-03a | `U2-03a-proxmox-firewall-vm101-options.png` | Firewall VM 101 aktif, Input Policy DROP | Ada |
+| U2-03b | `U2-03b-proxmox-firewall-vm101.png` | Aturan yang diizinkan: 80, 443, SSH dari laptop, 9100/8080 dari VM monitoring, ICMP | Ada |
+| U2-04 | `U2-04-docker-compose-ps.png` | 4 container healthy dengan image GHCR; hanya nginx membuka port 80/443 | Ada |
+| U2-05 | `U2-05-github-packages-ghcr.png` | Paket container `curalyta/backend` dan `curalyta/frontend` di GHCR | Ada |
+| U2-06 | `U2-06-garage-object-storage.png` | Bucket `curalyta-db-backups`, key `curalyta-backup` hak RW, lifecycle 30 hari | Ada |
+| U2-07a | `U2-07a-proxmox-local-lvm-vm-disks.png` | Block storage `local-lvm`: disk VM dan cloud-init | Ada |
+| U2-07b | `U2-07b-proxmox-backup-disk-backups.png` | Arsip vzdump VM 101 di storage `backup-disk` | Ada |
 
 ## Unit 3: Perangkat keras (J.631120.003.01)
 
-| No | Halaman | Cara membuka | Yang harus terlihat |
+| No | Berkas | Isi | Status |
 |---|---|---|---|
-| U3-01 | Task Manager Windows → Performance (CPU, Memory, Disk) | Ctrl+Shift+Esc | Spesifikasi host fisik |
-| U3-02 | Proxmox → `pve` → Summary | Klik `pve` | CPU, RAM, storage host hypervisor |
-| U3-03 | Proxmox → VM 101 → Hardware | VM 101 → Hardware | vCPU, RAM, disk VM aplikasi |
-| U3-04 | Grafana panel CPU, Memori, Disk, Jaringan (rentang 6 jam) | Dashboard Curalyta | Pemakaian nyata termasuk lonjakan uji beban |
-| U3-05 | Terminal VM 101: `docker stats --no-stream` | SSH | Pemakaian per container |
+| U3-01 | `U3-01-task-manager.png` | Task Manager Windows → Performance (CPU, Memory, Disk host fisik) | Manual |
+| U3-02 | `U3-02-proxmox-node-summary.png` | Node `pve`: 6 vCPU i7-12700H, RAM 4,31 GiB, disk, kernel 7.0.14-25-pve | Ada |
+| U3-03 | `U3-03-proxmox-vm101-hardware.png` | Hardware VM 101: 2 GiB RAM, 2 core (host), disk 25 GB | Ada |
+| U3-04 | `U3-04-grafana-sumber-daya-6-jam.png` | CPU, memori, disk, jaringan VM dan per container selama 6 jam | Ada |
+| U3-05 | `U3-05-docker-stats.png` | `docker stats`, `free -h`, `df -h` di VM 101 | Ada |
 
 ## Unit 4: Aktivitas rutin IaaS/PaaS/SaaS (J.631120.013.01)
 
-| No | Halaman | Cara membuka | Yang harus terlihat |
+| No | Berkas | Isi | Status |
 |---|---|---|---|
-| U4-01 | Proxmox → Datacenter → Backup | Datacenter → Backup | Jadwal `curalyta-daily` 01:30, VM 101, keep-last 1 |
-| U4-02 | Proxmox → Datacenter → Tasks (riwayat vzdump, snapshot, rollback) | Panel bawah *Tasks* | Aktivitas backup/restore nyata |
-| U4-03 | GitHub → Actions → run CI/CD sukses (3 job hijau) | Tab Actions | Pipeline test → build → deploy |
-| U4-04 | GitHub → Settings → Actions → Runners | Settings → Actions → Runners | Runner `curalyta-app` online |
-| U4-05 | GitHub → Settings → Secrets and variables → Actions | Settings | Pengelolaan secret (nilai tersembunyi) |
-| U4-06 | Vercel → Deployments (riwayat + tombol Promote/Rollback) | Dashboard Vercel | Aktivitas rutin PaaS |
-| U4-07 | Terminal VM: `sudo apt-get update && apt list --upgradable` | SSH | Patching OS |
-| U4-08 | Terminal VM 101: `tail /var/log/curalyta/curalyta-backup.log` | SSH | Log backup harian |
+| U4-01 | `U4-01-proxmox-jadwal-backup.png` | Job backup 01:30, storage `backup-disk`, keep-last=1, VM 101 | Ada |
+| U4-02 | `U4-02-proxmox-riwayat-task.png` | Riwayat task: backup, restore VM 9102, snapshot, rollback | Ada |
+| U4-03 | `U4-03-github-actions-cicd.png` | Daftar run workflow CI/CD | Ada |
+| U4-03b | `U4-03b-github-actions-run-detail.png` | Satu run sukses: Test → Build & push → Deploy ke lab | Ada |
+| U4-04 | `U4-04-github-runner.png` | GitHub → Settings → Actions → Runners: runner `curalyta-app` online | Manual |
+| U4-05 | `U4-05-github-secrets.png` | GitHub → Settings → Secrets and variables → Actions (nilai tersembunyi) | Manual |
+| U4-06 | `U4-06-vercel-deployments.png` | Vercel → Deployments (riwayat, Promote/Rollback) | Manual |
+| U4-07 | `U4-07-patching-os.png` | `apt list --upgradable` kosong, unattended-upgrades aktif, riwayat apt | Ada |
+| U4-08 | `U4-08-log-backup-harian.png` | Cron 02:00, log backup ke `s3://curalyta-db-backups`, file dump + sha256 | Ada |
 
 ## Unit 5: Pemantauan sesuai SLA (J.631120.014.01)
 
-| No | Halaman | Cara membuka | Yang harus terlihat |
+| No | Berkas | Isi | Status |
 |---|---|---|---|
-| U5-01 | Grafana dashboard penuh (rentang 24 jam) | Dashboard Curalyta | Status UP, ketersediaan vs target 99%, latensi |
-| U5-02 | Prometheus → Status → Targets | :9090 → Status → Targets | 11 target UP |
-| U5-03 | Prometheus → Alerts | :9090 → Alerts | 8 aturan alert dan ambangnya |
-| U5-04 | Alertmanager saat insiden (alert firing) | :9093 | Alert P1 aktif |
-| U5-05 | Notifikasi ntfy di ponsel/browser | Aplikasi ntfy, langganan topik di `.env` VM 102 | Push alert firing/resolved |
-| U5-06 | Output `ops/laporan-sla.sh 24h` | Terminal | Ketersediaan, downtime, p95 vs target |
+| U5-01 | `U5-01-grafana-dashboard-24-jam.png` | Dashboard penuh rentang 24 jam | Ada |
+| U5-02 | `U5-02-prometheus-targets.png` | Semua target scrape UP | Ada |
+| U5-03 | `U5-03-prometheus-alert-rules.png` | 8 aturan alert dalam grup backup, ketersediaan, sumber daya | Ada |
+| U5-04a | `U5-04a-prometheus-alert-firing-insiden.png` | Grafik `ALERTS{alertstate="firing"}` pada rentang INC-001: LayananTidakTersedia (P1) dan HalamanWebGagal | Ada |
+| U5-04b | `U5-04b-alertmanager-status.png` | Status dan konfigurasi Alertmanager (route ke ntfy) | Ada |
+| U5-05 | `U5-05-ntfy-topik-notifikasi.png` | Notifikasi firing/resolved di ntfy.sh (web) | Ada |
+| U5-05b | `U5-05b-ntfy-ponsel.png` | Notifikasi yang sama di aplikasi ntfy ponsel dan email | Manual |
+| U5-06 | `U5-06-laporan-sla-24h.png` | Keluaran `ops/laporan-sla.sh 24h` | Ada |
+
+Catatan U5-04: Alertmanager hanya menampilkan alert yang sedang aktif, dan saat pengambilan tidak ada alert aktif. Karena itu bukti alert firing diambil dari riwayat Prometheus pada rentang insiden (U5-04a) dan dari notifikasi ntfy (U5-05).
 
 ## Unit 6: Dukungan teknis (J.631120.015.01)
 
-| No | Halaman | Cara membuka | Yang harus terlihat |
+| No | Berkas | Isi | Status |
 |---|---|---|---|
-| U6-01 | Browser saat insiden: aplikasi error (502) | URL produksi saat simulasi | Dampak ke pengguna |
-| U6-02 | Terminal: `ops/healthcheck.sh` saat insiden (FAIL) dan setelah pulih (OK) | SSH VM 101 | Diagnosis L1 dan verifikasi |
-| U6-03 | Grafana panel "Status uptime check" pada rentang insiden | Dashboard Curalyta | Garis turun ke 0 lalu kembali 1 |
-| U6-04 | `docs/LAPORAN_INSIDEN_001.md` di GitHub | Repo → docs | Laporan insiden lengkap |
-| U6-05 | `docs/SOP_DUKUNGAN_TEKNIS.md` (matriks eskalasi) | Repo → docs | Alur L1/L2/L3 |
+| U6-01 | `U6-01-aplikasi-error-insiden.png` | Browser saat insiden (502/gagal). Perlu simulasi ulang di jendela pemeliharaan; dampaknya sudah tercatat di `docs/bukti/tahap7-simulasi-insiden.log` | Manual |
+| U6-02 | `U6-02-healthcheck-pulih.png` | `ops/healthcheck.sh` setelah pulih: semua OK. Keluaran FAIL saat insiden ada di log bukti | Ada |
+| U6-03 | `U6-03-grafana-rentang-insiden.png` | Dashboard rentang 11:40–12:05 WIB (INC-001) | Ada |
+| U6-04 | `U6-04-laporan-insiden-github.png` | `docs/LAPORAN_INSIDEN_001.md` di GitHub | Ada |
+| U6-05 | `U6-05-sop-dukungan-teknis-github.png` | `docs/SOP_DUKUNGAN_TEKNIS.md` (peran L1/L2/L3) | Ada |
 
 ## Aplikasi (bukti layanan berjalan)
 
-| No | Halaman | Yang harus terlihat |
-|---|---|---|
-| A-01 | Landing page produksi (URL publik HTTPS, ikon gembok) | Aplikasi diakses publik lewat HTTPS |
-| A-02 | Login admin → Dashboard admin → panel sistem (AI: Groq, rotasi key) | Fitur berjalan |
-| A-03 | Login dokter (akun demo) → detail pasien → AI Summary | Integrasi database + AI |
-| A-04 | `https://<url-produksi>/health` di browser | JSON status ok + latensi database |
-| A-05 | Staging Vercel `https://curalyta-frontend.vercel.app` | PaaS staging berjalan |
+| No | Berkas | Isi | Status |
+|---|---|---|---|
+| A-01 | `A-01-produksi-landing-https.png` | Landing page produksi lewat URL publik HTTPS | Ada |
+| A-02 | `A-02-admin-dashboard.png` | Dashboard admin, panel System Info (AI Groq, 2 key aktif berotasi) | Ada |
+| A-03 | `A-03-dokter-ai-summary.png` | Akun dokter demo → detail pasien → Ringkasan Klinis AI | Ada |
+| A-04 | `A-04-produksi-health-json.png` | `/health`: status ok, database up, latensi | Ada |
+| A-05 | `A-05-staging-vercel.png` | Staging Vercel berjalan | Ada |
+
+## Yang perlu diambil manual
+
+Simpan dengan nama berkas pada tabel di atas. Pastikan jam taskbar terlihat.
+
+1. U1-04 dan U4-06: login vercel.com → project `curalyta-frontend` → Deployments.
+2. U2-01: jendela VMware Workstation saat `curalyta-pve` berjalan.
+3. U3-01: Task Manager (Ctrl+Shift+Esc) → Performance.
+4. U4-04: github.com/Muhammadabrarrayhan2/curalyta → Settings → Actions → Runners.
+5. U4-05: Settings → Secrets and variables → Actions.
+6. U5-05b: aplikasi ntfy di ponsel yang berlangganan topik alert, dan email alert setelah token ntfy dipasang (`ops/lab/set-ntfy-token.sh`).
+7. U6-01 (opsional): hanya bila simulasi insiden diulang di jendela pemeliharaan.
