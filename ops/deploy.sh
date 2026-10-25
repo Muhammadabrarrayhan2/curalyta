@@ -30,10 +30,14 @@ cd "$APP_DIR"
 log INFO "Deploy tag $TAG dimulai"
 
 # ---- 1. Konfigurasi terbaru ----
-if [ -d .git ]; then
+if [ -d .git ] && [ -z "${DEPLOY_CONFIG_UPDATED:-}" ]; then
   git fetch --quiet origin main
   git reset --quiet --hard origin/main
   log INFO "Konfigurasi di commit $(git rev-parse --short HEAD)"
+  # Skrip ini bisa ikut berubah oleh git reset; jalankan ulang versi terbaru
+  # agar logika deploy selalu sesuai konfigurasi yang baru diambil
+  export DEPLOY_CONFIG_UPDATED=1
+  exec "$APP_DIR/ops/deploy.sh" "$TAG"
 fi
 
 # ---- 2. Login registry ----
